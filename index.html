@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  方寸                                                         ║
+  ║  由 不一书个人工作台生成器 (bys-personal-dashboard) 生成       ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║  改这个文件时请遵守：                                          ║
+  ║  1. 每个功能必须被分区标记包裹，且 START 和 END 的功能名        ║
+  ║     必须一字不差（HTML 和 JS 两处都要）                        ║
+  ║  2. 数据读写只走 Store.*，不要直接碰 localStorage             ║
+  ║  3. 输入框 font-size 不能小于 16px                            ║
+  ║  4. 敏感数据（API key）走 Store.setSecret，不进备份            ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>方寸</title>
+
+<!-- PWA：这四行决定了"添加到主屏幕"之后是不是全屏、图标好不好看 -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="方寸">
+<meta name="theme-color" content="#5c4a3d">
+
+<style>
+/* ==== 主题变量 · 国风日夜双主题（宣纸 / 玄夜） ==== */
+:root{
+  --bg:#f2ece1;
+  --sidebar:#5c4a3d;
+  --sidebar-text:#f2ece1;
+  --sidebar-active:#7a6455;
+  --card:#fdfaf4;
+  --text:#3b322b;
+  --text-dim:#8c7f73;
+  --accent:#a8443a;
+  --radius:8px;
+  --shadow:0 2px 10px rgba(90,70,50,.10);
+  --font:"Songti SC","STSong","Noto Serif SC",serif;
+}
+body.night{
+  --bg:#191512;
+  --sidebar:#221c17;
+  --sidebar-text:#b8a48c;
+  --sidebar-active:#3d332a;
+  --card:#262019;
+  --text:#ece2d0;
+  --text-dim:#9a8a74;
+  --accent:#c8553d;
+  --shadow:0 0 0 1px rgba(255,240,220,.07);
+}
+
+/* ==== 基础 ==== */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--font); background:var(--bg); color:var(--text);
+  overflow:hidden; transition:background .25s;
+}
+.app{display:flex;height:100%}
+
+/* ==== 侧边栏：常驻窄条 ==== */
+.side{
+  width:76px;flex-shrink:0;background:var(--sidebar);
+  display:flex;flex-direction:column;
+  padding:calc(12px + env(safe-area-inset-top,0)) 6px calc(12px + env(safe-area-inset-bottom,0));
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transition:background .25s;
+}
+.side::-webkit-scrollbar{display:none}
+.brand{width:100%;border:none;background:transparent;cursor:pointer;text-align:center;margin-bottom:14px;flex-shrink:0;padding:8px 2px;border-radius:10px;font-family:inherit}
+.brand .logo{font-size:26px;line-height:1}
+.brand .name{font-size:12px;color:var(--sidebar-text);opacity:.9;margin-top:4px;line-height:1.3;word-break:break-all;letter-spacing:1px}
+.brand.on{background:var(--sidebar-active)}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav button{
+  border:none;background:transparent;font-family:inherit;
+  padding:10px 2px;border-radius:10px;
+  color:var(--sidebar-text);font-size:11px;line-height:1.3;
+}
+.nav button .ico{display:block;font-size:21px;margin-bottom:3px}
+.nav button.on{background:var(--sidebar-active)}
+.theme-btn{
+  margin-top:auto;flex-shrink:0;border:none;background:rgba(255,255,255,.08);
+  border-radius:10px;padding:9px 2px;font-size:18px;line-height:1;
+}
+body.night .theme-btn{background:rgba(255,255,255,.06)}
+
+/* ==== 内容区 ==== */
+.main{
+  flex:1;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(14px + env(safe-area-inset-top,0)) 12px calc(28px + env(safe-area-inset-bottom,0));
+}
+.page{display:none;flex-direction:column;gap:12px}
+.page.on{display:flex}
+.page-title{font-size:22px;font-weight:600;margin-bottom:2px;letter-spacing:1px}
+.page-sub{font-size:13px;color:var(--text-dim);margin-top:-8px;margin-bottom:2px}
+
+/* ==== 卡片 ==== */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;transition:background .25s}
+.card h2{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px;letter-spacing:1px}
+/* 国风识别特征：标题左侧朱砂竖线 */
+.card h2::before{content:"";width:3px;height:15px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.hint{font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5}
+.empty{font-size:13px;color:var(--text-dim);text-align:center;padding:18px 0}
+
+/* ==== 表单：字号必须 >=16px，否则 iOS 会自动放大整页 ==== */
+input,textarea,select{
+  width:100%;font-size:16px;font-family:inherit;color:var(--text);
+  padding:11px 13px;border:1px solid rgba(128,128,128,.28);
+  border-radius:calc(var(--radius) - 6px);background:transparent;
+}
+textarea{min-height:88px;resize:vertical;line-height:1.6}
+input::placeholder,textarea::placeholder{color:var(--text-dim)}
+.btn{
+  padding:11px 18px;font-size:15px;font-family:inherit;white-space:nowrap;
+  border:none;border-radius:calc(var(--radius) - 6px);
+  background:var(--accent);color:#fff;letter-spacing:1px;
+}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid rgba(128,128,128,.3)}
+.btn.danger{background:#d9534f}
+.btn:active{opacity:.75}
+.row{display:flex;gap:8px;align-items:center}
+.row .btn{flex-shrink:0}
+
+/* ==== 列表 ==== */
+.item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed rgba(128,128,128,.22)}
+.item:last-child{border-bottom:none}
+.item .grow{flex:1;min-width:0}
+.item .del{color:var(--text-dim);font-size:16px;background:none;border:none;padding:0 4px;flex-shrink:0}
+.box{
+  width:21px;height:21px;flex-shrink:0;margin-top:1px;
+  border:2px solid var(--accent);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:#fff;background:transparent;
+}
+.item.done .box{background:var(--accent)}
+.item.done .grow{text-decoration:line-through;color:var(--text-dim)}
+
+/* ==== 提示条 ==== */
+.banner{
+  background:var(--accent);color:#fff;padding:11px 14px;
+  border-radius:var(--radius);font-size:13px;line-height:1.5;
+  display:flex;align-items:center;gap:10px;
+}
+.banner button{
+  margin-left:auto;flex-shrink:0;background:rgba(255,255,255,.22);color:#fff;
+  border:none;padding:6px 12px;border-radius:8px;font-size:13px;font-family:inherit;
+}
+.toast{
+  position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0));
+  transform:translateX(-50%);z-index:99;
+  background:rgba(0,0,0,.82);color:#fff;padding:10px 18px;border-radius:20px;
+  font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.toast.on{opacity:1}
+
+/* ==== 干支 ==== */
+.gz-big{font-size:32px;font-weight:700;letter-spacing:5px;text-align:center;padding:6px 0 2px}
+.gz-sub{text-align:center;font-size:13px;color:var(--text-dim);letter-spacing:1px;line-height:1.8}
+
+/* ==== 语录 ==== */
+.quote{font-size:19px;line-height:1.9;letter-spacing:1.5px;padding:6px 2px}
+.quote-src{font-size:12px;color:var(--text-dim);margin:8px 0;text-align:right}
+
+/* ==== 首页摘要 ==== */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat-box{background:rgba(128,128,128,.07);border-radius:10px;padding:10px 6px;text-align:center}
+.stat-box .num{font-size:20px;font-weight:700;color:var(--accent)}
+.stat-box .lbl{font-size:11px;color:var(--text-dim);margin-top:2px}
+
+/* ==== 农历日历 ==== */
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+.cal-head span{text-align:center;font-size:12px;color:var(--text-dim);padding:4px 0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-cell{
+  min-height:52px;padding:5px 3px;border-radius:8px;text-align:center;cursor:pointer;
+  background:rgba(128,128,128,.07);
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;
+}
+.cal-cell .sd{font-size:14px;font-weight:600;line-height:1.3}
+.cal-cell .ld{font-size:10px;color:var(--text-dim);line-height:1.2;transform:scale(.92)}
+.cal-cell .ld.jq{color:var(--accent);font-weight:600}
+.cal-cell .dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin-top:1px}
+.cal-cell.today{outline:2px solid var(--accent);outline-offset:-2px}
+.cal-cell.sel{background:var(--sidebar-active);color:var(--sidebar-text)}
+.cal-cell.sel .ld{color:var(--sidebar-text);opacity:.8}
+.cal-cell:active{opacity:.7}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-nav .ym{font-size:16px;font-weight:600;letter-spacing:1px}
+.cal-nav button{
+  border:1px solid rgba(128,128,128,.3);background:transparent;color:var(--text);
+  border-radius:8px;padding:7px 14px;font-size:15px;font-family:inherit;
+}
+
+/* ==== 四柱 ==== */
+.pill{display:inline-block;background:rgba(128,128,128,.1);border-radius:6px;padding:3px 8px;margin:2px 3px 2px 0;font-size:14px;letter-spacing:1px}
+.pill b{color:var(--accent)}
+
+/* ==== 密码本 ==== */
+.pwd-row{display:flex;align-items:center;gap:8px}
+.pwd-row .mono{letter-spacing:2px}
+.mini-btn{
+  border:1px solid rgba(128,128,128,.3);background:transparent;color:var(--text);
+  border-radius:7px;padding:5px 10px;font-size:13px;font-family:inherit;flex-shrink:0;
+}
+
+/* ==== 工具类 ==== */
+.fs12{font-size:12px}
+.fs13{font-size:13px}
+.fs14{font-size:14px}
+
+/* ==== 账户切换 ==== */
+.seg{display:flex;background:rgba(128,128,128,.08);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px}
+.seg button{flex:1;border:none;background:transparent;color:var(--text);font-family:inherit;font-size:14px;padding:9px 0;border-radius:8px;letter-spacing:1px}
+.seg button.on{background:var(--accent);color:#fff}
+
+/* ==== 常用网址 ==== */
+.link-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.link-card{
+  background:rgba(128,128,128,.07);border-radius:12px;padding:14px 10px;text-align:center;
+  text-decoration:none;color:var(--text);display:block;
+}
+.link-card:active{opacity:.7}
+.link-card .l-ico{font-size:24px;line-height:1}
+.link-card .l-name{font-size:14px;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.link-card .l-host{font-size:11px;color:var(--text-dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ==== 确认弹窗（自绘，不依赖浏览器 confirm） ==== */
+.modal-mask{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-mask.on{opacity:1;pointer-events:auto}
+.modal{
+  background:var(--card);color:var(--text);border-radius:14px;
+  padding:22px 20px;width:min(300px,82vw);
+  box-shadow:0 8px 30px rgba(0,0,0,.25);transform:scale(.95);transition:transform .2s;
+}
+.modal-mask.on .modal{transform:scale(1)}
+.modal .m-text{font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:18px;word-break:break-all}
+.modal .m-actions{display:flex;gap:10px}
+.modal .m-actions button{flex:1;padding:11px 0;font-size:15px;font-family:inherit;border:none;border-radius:10px;letter-spacing:1px}
+.modal .m-no{background:rgba(128,128,128,.15);color:var(--text)}
+.modal .m-yes{background:var(--accent);color:#fff}
+.modal .m-yes.danger{background:#d9534f}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ==== 侧边栏 START ==== -->
+  <aside class="side">
+    <button class="brand" id="brandBtn" onclick="App.go('home')" title="方寸 · 首页">
+      <div class="logo">☯️</div>
+      <div class="name">方寸</div>
+    </button>
+    <nav class="nav" id="nav">
+      <!-- 由 App.routes 自动渲染 -->
+    </nav>
+    <button class="theme-btn" id="themeBtn" onclick="Theme.toggle()" title="日夜切换">🌙</button>
+  </aside>
+  <!-- ==== 侧边栏 END ==== -->
+
+  <main class="main" id="main">
+
+    <!-- ==== 功能：首页 START ==== -->
+    <section class="page" id="page-home">
+      <div class="page-title">方寸</div>
+      <div class="page-sub" id="homeDateSub" style="margin-top:0;color:var(--accent);letter-spacing:2px">一切福田，不离方寸</div>
+
+      <div class="card">
+        <h2>📅 今日干支</h2>
+        <div class="gz-big" id="homeGzDay">—</div>
+        <div class="gz-sub" id="homeGzSub">—</div>
+      </div>
+
+      <div class="card">
+        <h2>💬 今日语录</h2>
+        <div class="quote" id="quoteText">—</div>
+        <div class="row">
+          <button class="mini-btn" onclick="Quote.next()">换一条</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="quoteInput" placeholder="往语录库里加一句……">
+          <button class="btn" onclick="Quote.add()">存入</button>
+        </div>
+        <div id="quoteManage" style="margin-top:6px"></div>
+      </div>
+
+      <div class="card">
+        <h2>📊 今日一览</h2>
+        <div class="stat-grid" id="homeStats"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：首页 END ==== -->
+
+    <!-- ==== 功能：站桩 START ==== -->
+    <section class="page" id="page-zhan">
+      <div class="page-title">站桩</div>
+      <div class="page-sub" id="zhanSub"></div>
+
+      <div class="card">
+        <h2>🧘 今日打卡</h2>
+        <div class="zhan-day" id="zhanDayNum" style="font-size:30px;font-weight:700;color:var(--accent);letter-spacing:2px">—</div>
+        <div class="hint" style="margin-top:2px;margin-bottom:12px" id="zhanStreak"></div>
+        <div class="row">
+          <input type="number" id="zhanMin" placeholder="时长（分钟）" min="1" max="600">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="zhanFeel" placeholder="此刻感受：气感、杂念、身体……">
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" onclick="Zhan.save()">记下今日</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🗓 近 10 次记录</h2>
+        <div id="zhanList"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：站桩 END ==== -->
+
+    <!-- ==== 功能：Alpha START ==== -->
+    <section class="page" id="page-alpha">
+      <div class="page-title">Alpha 日志</div>
+      <div class="page-sub" id="alphaSub"></div>
+      <div class="seg" id="alphaSeg">
+        <button data-a="bing" class="on" onclick="Alpha.switch('bing')">❄️ 冰神</button>
+        <button data-a="han" onclick="Alpha.switch('han')">🌸 涵涵</button>
+      </div>
+
+      <div class="card">
+        <h2>📈 记一笔提交</h2>
+        <div class="row">
+          <select id="alphaRegion">
+            <option value="">地区…</option>
+            <option>USA</option>
+            <option>GLB</option>
+            <option>EUR</option>
+            <option>ASI</option>
+            <option>CHN</option>
+            <option>KOR</option>
+            <option>HKG</option>
+            <option>IND</option>
+            <option>MEA</option>
+          </select>
+          <select id="alphaType">
+            <option value="">类型…</option>
+            <option>AOTM</option>
+            <option>PPA</option>
+            <option>RA</option>
+            <option>SA</option>
+          </select>
+          <button class="btn" onclick="Alpha.add()">记</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="alphaNote" placeholder="备注（id / 提醒 / 经验，可空）">
+        </div>
+        <div id="alphaTodayList" style="margin-top:6px"></div>
+      </div>
+
+      <div class="card">
+        <h2>📊 统计</h2>
+        <div class="stat-grid" id="alphaStats"></div>
+        <p class="hint" style="margin-top:10px">记错了的条目点 ✕ 删掉。初始累计在「设置」里设。</p>
+      </div>
+
+      <div class="card">
+        <h2>🗓 近日历史</h2>
+        <div id="alphaList"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：Alpha END ==== -->
+
+    <!-- ==== 功能：排盘 START ==== -->
+    <section class="page" id="page-paipan">
+      <div class="page-title">排盘</div>
+      <div class="page-sub">深度分析，交给你的站</div>
+
+      <div class="card" style="text-align:center;padding:28px 16px">
+        <div style="font-size:42px;line-height:1">🌙</div>
+        <div style="font-size:19px;font-weight:700;letter-spacing:2px;margin:14px 0 6px">八字排盘 · 子平盲派双核</div>
+        <div class="fs13" style="color:var(--text-dim);line-height:1.9;margin-bottom:18px">
+          刑冲合害可视化 · 真太阳时校正<br>
+          子平命理 / 盲派做功 / 串宫压运 · 大运流年
+        </div>
+        <a class="btn" style="text-decoration:none;display:inline-block;padding:13px 34px;font-size:16px" href="https://shimmering-cannoli-e2410e.netlify.app/" target="_blank" rel="noopener">打开排盘站 →</a>
+        <p class="hint" style="margin-top:14px">在新页面打开，记好的八字可以在「农历」页随时回查。</p>
+      </div>
+
+      <div class="card">
+        <h2>💡 用法</h2>
+        <p class="hint" style="margin-top:0;line-height:2">
+          1. 「农历」页存好八字（含称呼和备注）<br>
+          2. 想细看时点「打开排盘站」，输入同一组生辰<br>
+          3. 站内可看地支关系、神煞、五行力量、大运<br>
+          4. 早晚子时的细论也在站内区分
+        </p>
+      </div>
+    </section>
+    <!-- ==== 功能：排盘 END ==== -->
+
+    <!-- ==== 功能：待办 START ==== -->
+    <section class="page" id="page-todo">
+      <div class="page-title">待办</div>
+      <div class="page-sub" id="todoSub"></div>
+
+      <div class="card">
+        <h2>✅ 记一件</h2>
+        <div class="row">
+          <input type="text" id="todoInput" placeholder="要办的事，回车直接添加" onkeydown="if(event.key==='Enter')Todo.add()">
+          <button class="btn" onclick="Todo.add()">添加</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="date" id="todoDate">
+          <span class="fs12" style="color:var(--text-dim)">可选：目标日（自动算还剩几天）</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📋 清单</h2>
+        <div id="todoList"></div>
+        <div id="todoDoneWrap"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：待办 END ==== -->
+
+    <!-- ==== 功能：密码本 START ==== -->
+    <section class="page" id="page-pass">
+      <div class="page-title">密码本</div>
+      <div class="page-sub">只存在这台手机里，不上传</div>
+
+      <div class="card">
+        <h2>🔍 查找</h2>
+        <input type="text" id="passSearch" placeholder="搜网站或账号……" oninput="Pass.render()">
+      </div>
+
+      <div class="card">
+        <h2>➕ 记一条</h2>
+        <div class="row">
+          <input type="text" id="passSite" placeholder="网站 / 应用（如：Github）">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="passAccount" placeholder="账号">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="passPwd" placeholder="密码">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="passNote" placeholder="备注（可选）">
+          <button class="btn" onclick="Pass.add()">存</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🗂 全部 <span id="passCount" class="fs12" style="color:var(--text-dim);font-weight:400"></span></h2>
+        <div id="passList"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：密码本 END ==== -->
+
+    <!-- ==== 功能：网址 START ==== -->
+    <section class="page" id="page-links">
+      <div class="page-title">江湖</div>
+      <div class="page-sub">江湖各处，一键即达</div>
+
+      <div class="card">
+        <h2>➕ 占一处</h2>
+        <div class="row">
+          <input type="text" id="linkName" placeholder="名号（如：八字排盘站）">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="linkUrl" placeholder="去处（如 baidu.com，自动补 https://）">
+          <button class="btn" onclick="Links.add()">存</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🗺️ 江湖名录 <span id="linkCount" class="fs12" style="color:var(--text-dim);font-weight:400"></span></h2>
+        <div id="linkGrid" class="link-grid"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：网址 END ==== -->
+
+    <!-- ==== 功能：农历 START ==== -->
+    <section class="page" id="page-lunar">
+      <div class="page-title">农历 · 八字</div>
+      <div class="page-sub" id="lunarTodaySub"></div>
+
+      <div class="card">
+        <h2>📅 今日干支</h2>
+        <div class="gz-big" id="lunarGzDay">—</div>
+        <div class="gz-sub" id="lunarGzSub">—</div>
+      </div>
+
+      <div class="card">
+        <div class="cal-nav">
+          <button onclick="LunarPage.shift(-1)">‹</button>
+          <div class="ym" id="calYm"></div>
+          <button onclick="LunarPage.shift(1)">›</button>
+        </div>
+        <div class="cal-head"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div id="calDetail" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <h2>🔮 八字记录</h2>
+        <div class="row">
+          <input type="text" id="baziName" placeholder="称呼（自己、某友…）">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="number" id="baziYear" placeholder="年" min="1900" max="2100">
+          <input type="number" id="baziMonth" placeholder="月" min="1" max="12">
+          <input type="number" id="baziDay" placeholder="日" min="1" max="31">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <select id="baziHour">
+            <option value="-1">不知时辰</option>
+            <option value="0">子时 23:00-01:00</option>
+            <option value="1">丑时 01:00-03:00</option>
+            <option value="2">寅时 03:00-05:00</option>
+            <option value="3">卯时 05:00-07:00</option>
+            <option value="4">辰时 07:00-09:00</option>
+            <option value="5">巳时 09:00-11:00</option>
+            <option value="6">午时 11:00-13:00</option>
+            <option value="7">未时 13:00-15:00</option>
+            <option value="8">申时 15:00-17:00</option>
+            <option value="9">酉时 17:00-19:00</option>
+            <option value="10">戌时 19:00-21:00</option>
+            <option value="11">亥时 21:00-23:00</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="baziNote" placeholder="备注（问什么事…）">
+          <button class="btn" onclick="Bazi.add()">排盘存档</button>
+        </div>
+        <p class="hint">日柱按自然日计（23 点跨子时的细论，去排盘站区分早晚子时）。</p>
+        <div id="baziList" style="margin-top:6px"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：农历 END ==== -->
+
+    <!-- 设置页是必备的，不要删 -->
+    <!-- ==== 功能：设置 START ==== -->
+    <section class="page" id="page-settings">
+      <div class="page-title">设置</div>
+
+      <div class="card">
+        <h2>🌓 外观</h2>
+        <div class="row">
+          <button class="btn ghost" onclick="Theme.apply('day')">☀️ 宣纸</button>
+          <button class="btn ghost" onclick="Theme.apply('night')">🌙 玄夜</button>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <label class="fs14" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="autoThemeChk" style="width:auto" onchange="Theme.setAuto(this.checked)">
+            按时间自动切换（19 点入夜，7 点日出）
+          </label>
+        </div>
+        <p class="hint">侧边栏底部的 🌙/☀️ 按钮可随时手动切换。</p>
+      </div>
+
+      <div class="card">
+        <h2>📐 初始数据</h2>
+        <p class="hint" style="margin-top:0">非从零起步才需要设，一般只设一次，以后不用再动。</p>
+        <div style="margin-bottom:14px">
+          <label class="fs14" style="display:block;margin-bottom:6px">🧘 站桩目前累计到第几天</label>
+          <div class="row">
+            <input type="number" id="zhanBase" placeholder="如：300" min="1">
+            <button class="btn ghost" onclick="Zhan.saveBase()">保存</button>
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <label class="fs14" style="display:block;margin-bottom:6px">❄️ 冰神 Alpha 之前的累计</label>
+          <div class="row">
+            <input type="number" id="alphaBaseBing" placeholder="如：347" min="0">
+            <button class="btn ghost" onclick="Alpha.saveBaseFor('bing')">保存</button>
+          </div>
+        </div>
+        <div>
+          <label class="fs14" style="display:block;margin-bottom:6px">🌸 涵涵 Alpha 之前的累计</label>
+          <div class="row">
+            <input type="number" id="alphaBaseHan" placeholder="如：0" min="0">
+            <button class="btn ghost" onclick="Alpha.saveBaseFor('han')">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>💾 数据备份</h2>
+        <p class="hint" style="margin-top:0;margin-bottom:12px">
+          你的所有数据都存在这台手机的浏览器里，不在任何服务器上。<br>
+          换手机、清理浏览器数据前，记得先导出备份。<br>
+          <b>注意：备份文件包含密码本内容，不要转发给任何人。</b>
+        </p>
+        <div class="row">
+          <button class="btn" onclick="Store.exportFile()">导出备份</button>
+          <button class="btn ghost" onclick="document.getElementById('importFile').click()">恢复备份</button>
+        </div>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="Store.importFile(this)">
+        <p class="hint" id="backupInfo"></p>
+      </div>
+
+      <div class="card">
+        <h2>⚠️ 危险操作</h2>
+        <button class="btn danger" onclick="Store.wipe()">清空所有数据</button>
+        <p class="hint">清空前请确认已经导出过备份，这个操作无法撤销。</p>
+      </div>
+
+      <div class="card">
+        <p class="hint" style="margin:0;text-align:center">
+          方寸<br>
+          <span style="opacity:.6">v1.0.0</span>
+        </p>
+      </div>
+    </section>
+    <!-- ==== 功能：设置 END ==== -->
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 确认弹窗 -->
+<div class="modal-mask" id="modalMask" onclick="if(event.target===this)UI.modalHide()">
+  <div class="modal">
+    <div class="m-text" id="modalText"></div>
+    <div class="m-actions">
+      <button class="m-no" onclick="UI.modalHide()">取消</button>
+      <button class="m-yes" id="modalYes" onclick="UI.modalYes()">确定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   Store · 存储抽象层
+   所有数据读写都必须走这里，不要直接用 localStorage。
+   这样以后想换成云端同步，只需要改 driver，功能代码一行不动。
+   ═══════════════════════════════════════════════════════════ */
+const Store = (() => {
+  const NS  = 'bysdash:';           // 普通数据，会进备份
+  const SEC = 'bysdash$secret:';    // 敏感数据（API key），不进备份
+
+  const driver = {
+    get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k,v){
+      try { localStorage.setItem(k, JSON.stringify(v)); return true; }
+      catch(e){
+        // 配额超了几乎总是因为存了没压缩的图片
+        UI.toast('存储空间满了，请到设置里导出备份后清理旧数据');
+        console.error(e); return false;
+      }
+    },
+    remove(k){ localStorage.removeItem(k); },
+    keys(){ return Object.keys(localStorage); }
+  };
+
+  return {
+    get(key, fallback = null){
+      const v = driver.get(NS + key);
+      return v === null || v === undefined ? fallback : v;
+    },
+    set(key, val){
+      const ok = driver.set(NS + key, val);
+      if (ok) driver.set(NS + '_lastWrite', Date.now());
+      return ok;
+    },
+    remove(key){ driver.remove(NS + key); },
+
+    // 列出某个前缀下的所有 key（去掉前缀），用于遍历按天存的历史记录
+    list(prefix){
+      return driver.keys()
+        .filter(k => k.startsWith(NS + prefix))
+        .map(k => k.slice(NS.length));
+    },
+
+    // 按天存取：自动带上今天的日期，功能代码不用自己拼 key
+    getDaily(key, fallback = null){ return this.get(key + ':' + Util.today(), fallback); },
+    setDaily(key, val){ return this.set(key + ':' + Util.today(), val); },
+
+    // 敏感数据：单独命名空间，导出时排除
+    getSecret(key){ return driver.get(SEC + key); },
+    setSecret(key, val){ return driver.set(SEC + key, val); },
+
+    exportAll(){
+      const data = {};
+      driver.keys().filter(k => k.startsWith(NS)).forEach(k => {
+        data[k.slice(NS.length)] = driver.get(k);
+      });
+      return { app:'方寸', version:1, exportedAt:new Date().toISOString(), data };
+    },
+
+    exportFile(){
+      const blob = new Blob([JSON.stringify(this.exportAll(), null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '方寸备份-' + Util.today() + '.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      this.set('_lastBackup', Date.now());
+      UI.toast('已导出，建议转发到微信文件传输助手存一份');
+      Settings.refreshBackupInfo();
+    },
+
+    importFile(input){
+      const f = input.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = e => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!parsed.data) throw new Error('格式不对');
+          UI.confirm('恢复备份会覆盖当前所有数据，确定吗？', () => {
+            Object.entries(parsed.data).forEach(([k,v]) => driver.set(NS + k, v));
+            UI.toast('恢复成功，正在重新加载');
+            setTimeout(() => location.reload(), 900);
+          }, '恢复');
+        } catch(err){
+          UI.toast('文件读不了，可能不是备份文件');
+        }
+      };
+      r.readAsText(f);
+      input.value = '';
+    },
+
+    wipe(){
+      UI.confirm('确定清空所有数据？这个操作无法撤销。', () => {
+        UI.confirm('再确认一次：真的要清空吗？', () => {
+          driver.keys().filter(k => k.startsWith(NS)).forEach(k => driver.remove(k));
+          location.reload();
+        }, '清空');
+      }, '清空');
+    }
+  };
+})();
+
+
+/* ═══════════════════════════════════════════════════════════
+   Util · 工具
+   ═══════════════════════════════════════════════════════════ */
+const Util = {
+  today(){
+    const d = new Date();
+    return d.getFullYear() + '-' +
+           String(d.getMonth()+1).padStart(2,'0') + '-' +
+           String(d.getDate()).padStart(2,'0');
+  },
+  uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); },
+  esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); },
+
+  // 图片必须压缩后再存，否则几张手机原图就撑爆 localStorage
+  compressImage(file, maxW = 800, quality = .72){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width);
+        const cv = document.createElement('canvas');
+        cv.width  = img.width  * scale;
+        cv.height = img.height * scale;
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        resolve(cv.toDataURL('image/jpeg', quality));
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   UI · 界面工具
+   ═══════════════════════════════════════════════════════════ */
+const UI = {
+  toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(this._t);
+    this._t = setTimeout(() => t.classList.remove('on'), 2200);
+  },
+  banner(html, pageId = null){
+    const box = document.createElement('div');
+    box.className = 'banner';
+    box.innerHTML = html;
+    const target = pageId ? document.getElementById(pageId) : document.querySelector('.page.on');
+    target?.prepend(box);
+    return box;
+  },
+  /* 自绘确认弹窗：msg 文案，onYes 回调，yesText 确认按钮文字，danger 红色按钮 */
+  confirm(msg, onYes, yesText = '确定', danger = true){
+    const mask = document.getElementById('modalMask');
+    if (!mask) return;
+    document.getElementById('modalText').textContent = msg;
+    const y = document.getElementById('modalYes');
+    y.textContent = yesText;
+    y.classList.toggle('danger', danger);
+    this._yesFn = onYes;
+    mask.classList.add('on');
+  },
+  modalHide(){
+    document.getElementById('modalMask')?.classList.remove('on');
+  },
+  modalYes(){
+    const f = this._yesFn;
+    this.modalHide();
+    f && f();
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   App · 路由与启动
+   每加一个功能，在 routes 里加一条，侧边栏自动就有了。
+   ═══════════════════════════════════════════════════════════ */
+const App = {
+  routes: [
+    { id:'home',     icon:'🏠', name:'首页',  hidden:true, onShow: () => Home.render() },
+    { id:'zhan',     icon:'🧘', name:'站桩',  onShow: () => Zhan.render() },
+    { id:'alpha',    icon:'📈', name:'Alpha', onShow: () => Alpha.render() },
+    { id:'lunar',    icon:'📅', name:'农历',  onShow: () => LunarPage.render() },
+    { id:'paipan',   icon:'🔮', name:'排盘',  onShow: () => {} },
+    { id:'todo',     icon:'✅', name:'待办',  onShow: () => Todo.render() },
+    { id:'pass',     icon:'🔑', name:'密码本', onShow: () => Pass.render() },
+    { id:'links',    icon:'🗺️', name:'江湖',  onShow: () => Links.render() },
+    { id:'settings', icon:'⚙️', name:'设置',  onShow: () => Settings.render() }
+  ],
+
+  go(id){
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+    document.getElementById('page-' + id)?.classList.add('on');
+    document.querySelectorAll('#nav button').forEach(b =>
+      b.classList.toggle('on', b.dataset.id === id));
+    document.getElementById('brandBtn')?.classList.toggle('on', id === 'home');
+    document.getElementById('main').scrollTop = 0;
+    Store.set('_lastPage', id);
+    this.routes.find(r => r.id === id)?.onShow?.();
+  },
+
+  init(){
+    Theme.init();
+    // 旧版「倒计时」数据并入待办（一次性迁移）
+    const oldGoals = Store.get('goal', []);
+    if (oldGoals.length){
+      const todo = Store.get('todo', []);
+      oldGoals.forEach(g => todo.unshift({ id: g.id, text: g.name, done: false, date: g.date || null, ts: g.ts || Date.now() }));
+      Store.set('todo', todo);
+      Store.remove('goal');
+    }
+    // 渲染侧边栏（hidden 的首页由品牌「方寸」承担，不占 tab）
+    document.getElementById('nav').innerHTML = this.routes.filter(r => !r.hidden).map(r =>
+      `<button data-id="${r.id}" onclick="App.go('${r.id}')">
+         <span class="ico">${r.icon}</span>${r.name}
+       </button>`).join('');
+
+    // 回到上次看的那一页
+    const last = Store.get('_lastPage');
+    this.go(this.routes.some(r => r.id === last) ? last : this.routes[0].id);
+
+    this.checkBackup();
+  },
+
+  // 用户永远不会主动点导出，所以要主动提醒
+  checkBackup(){
+    const last = Store.get('_lastBackup');
+    const write = Store.get('_lastWrite');
+    if (!write) return;                                  // 还没存过东西，不用提醒
+    const days = last ? (Date.now() - last) / 864e5 : 99;
+    if (days < 7) return;
+    const b = UI.banner(
+      `<span>${last ? '已经 ' + Math.floor(days) + ' 天没备份了' : '记得备份一下，数据只在这台手机上'}</span>
+       <button onclick="App.go('settings')">去备份</button>`);
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   Settings · 设置页
+   ═══════════════════════════════════════════════════════════ */
+const Settings = {
+  keys: [],
+
+  render(){
+    this.refreshBackupInfo();
+    const chk = document.getElementById('autoThemeChk');
+    if (chk) chk.checked = Store.get(Theme.autoKey, true);
+    // 回填初始数据
+    const zb = document.getElementById('zhanBase');
+    if (zb && typeof Zhan !== 'undefined') zb.value = Zhan.dayNumNow();
+    const bb = document.getElementById('alphaBaseBing');
+    if (bb && typeof Alpha !== 'undefined') bb.value = Store.get('alpha_base_bing', 0) || '';
+    const bh = document.getElementById('alphaBaseHan');
+    if (bh && typeof Alpha !== 'undefined') bh.value = Store.get('alpha_base_han', 0) || '';
+  },
+
+  refreshBackupInfo(){
+    const last = Store.get('_lastBackup');
+    const el = document.getElementById('backupInfo');
+    if (el) el.textContent = last
+      ? '上次备份：' + new Date(last).toLocaleDateString('zh-CN')
+      : '还没备份过';
+  }
+};
+
+
+/* ==== 功能：站桩 START ==== */
+const Zhan = {
+  // 数据：zhan:YYYY-MM-DD = {min, feel, ts}
+  dates(){
+    return Store.list('zhan:').map(k => k.slice(5)).sort();
+  },
+  stats(){
+    const dates = this.dates();
+    const total = dates.length;
+    // 从今天往前数连续天数
+    let streak = 0;
+    const d = new Date();
+    for (;;){
+      const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      if (Store.get('zhan:' + ds)) { streak++; d.setDate(d.getDate() - 1); }
+      else break;
+      if (streak > 3700) break;
+    }
+    return { streak, total };
+  },
+  render(){
+    const { streak, total } = this.stats();
+    const today = Store.getDaily('zhan');
+    const base = Store.get('zhan_base', 0) || 0;
+    const dayNum = base + total + (today ? 0 : 1);
+    document.getElementById('zhanDayNum').textContent = today ? ('第 ' + dayNum + ' 天 · 已打卡') : ('第 ' + dayNum + ' 天');
+    document.getElementById('zhanStreak').textContent = '连续 ' + streak + ' 天 · 工作台记录 ' + total + ' 天';
+    document.getElementById('zhanSub').textContent = Lunar.todayGZ().day + '日 · 站的是桩，定的是心';
+    document.getElementById('zhanMin').value = today ? (today.min || '') : '';
+    document.getElementById('zhanFeel').value = today ? (today.feel || '') : '';
+    // 近 10 次
+    const recent = this.dates().slice(-10).reverse();
+    document.getElementById('zhanList').innerHTML = recent.length
+      ? recent.map(ds => {
+          const r = Store.get('zhan:' + ds);
+          return '<div class="item"><div class="grow">' +
+            '<b>' + ds.slice(5) + '</b> · ' + (r.min ? r.min + ' 分钟' : '未记时长') +
+            (r.feel ? '<div style="font-size:13px;color:var(--text-dim);margin-top:2px">' + Util.esc(r.feel) + '</div>' : '') +
+          '</div><button class="del" onclick="Zhan.del(\'' + ds + '\')">✕</button></div>';
+        }).join('')
+      : '<div class="empty">还没有记录，今天站一柱？</div>';
+  },
+  del(ds){
+    UI.confirm('删掉 ' + ds.slice(5) + ' 这条站桩记录？', () => {
+      Store.remove('zhan:' + ds);
+      this.render();
+      UI.toast('已删除');
+    }, '删除');
+  },
+  saveBase(){
+    const v = parseInt(document.getElementById('zhanBase').value, 10);
+    if (isNaN(v) || v < 1){ UI.toast('填个数字（至少 1）'); return; }
+    const total = this.dates().length;
+    const today = Store.getDaily('zhan');
+    // 把「目前累计第 X 天」换算成基准：base = X - 已记录天数 - (今天没记则 1)
+    const base = v - total - (today ? 0 : 1);
+    Store.set('zhan_base', Math.max(0, base));
+    UI.toast('已按累计第 ' + v + ' 天起算');
+    this.render();
+  },
+  save(){
+    const min = parseInt(document.getElementById('zhanMin').value, 10);
+    const feel = document.getElementById('zhanFeel').value.trim();
+    if (!min && !feel){ UI.toast('写点时长或感受再记'); return; }
+    Store.setDaily('zhan', { min: min || null, feel, ts: Date.now() });
+    UI.toast('已记下，第 ' + this.dayNumNow() + ' 天');
+    this.render();
+  },
+  dayNumNow(){
+    const total = this.dates().length;
+    const today = Store.getDaily('zhan');
+    return (Store.get('zhan_base', 0) || 0) + total + (today ? 0 : 1);
+  }
+};
+/* ==== 功能：站桩 END ==== */
+
+
+/* ==== 功能：Alpha START ==== */
+const Alpha = {
+  // 数据：alpha:YYYY-MM-DD = [{id, owner, region, type, note, ts}]，owner 区分冰神/涵涵
+  ACCTS: [ {key:'bing', name:'冰神', icon:'❄️'}, {key:'han', name:'涵涵', icon:'🌸'} ],
+  acct: 'bing',
+  acctName(){ const a = this.ACCTS.find(x => x.key === this.acct); return a ? a.name : this.acct; },
+  switch(id){
+    this.acct = id;
+    document.querySelectorAll('#alphaSeg button').forEach(b => b.classList.toggle('on', b.dataset.a === id));
+    this.render();
+  },
+  todayList(){ return Store.getDaily('alpha', []).filter(x => x.owner === this.acct); },
+  dates(){
+    // 该账户有记录的所有日期
+    return Store.list('alpha:').map(k => k.slice(6)).filter(ds =>
+      Store.get('alpha:' + ds, []).some(x => x.owner === this.acct)).sort();
+  },
+  statsFor(acct){
+    const today = Store.getDaily('alpha', []).filter(x => x.owner === acct).length;
+    const base = Store.get('alpha_base_' + acct, 0) || 0;
+    let week = 0;
+    const d = new Date();
+    for (let i = 0; i < 7; i++){
+      const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      week += Store.get('alpha:' + ds, []).filter(x => x.owner === acct).length;
+      d.setDate(d.getDate() - 1);
+    }
+    const total = base + Store.list('alpha:').reduce((s, k) =>
+      s + Store.get(k, []).filter(x => x.owner === acct).length, 0);
+    return { today, week, total };
+  },
+  stats(){ return this.statsFor(this.acct); },
+  saveBaseFor(acct){
+    const el = document.getElementById(acct === 'bing' ? 'alphaBaseBing' : 'alphaBaseHan');
+    if (!el) return;
+    const v = parseInt(el.value, 10);
+    if (isNaN(v) || v < 0){ UI.toast('填个数字'); return; }
+    Store.set('alpha_base_' + acct, v);
+    UI.toast((acct === 'bing' ? '冰神' : '涵涵') + ' 初始累计已设为 ' + v);
+    this.render();
+  },
+  add(){
+    const region = document.getElementById('alphaRegion').value;
+    const type = document.getElementById('alphaType').value;
+    const note = document.getElementById('alphaNote').value.trim();
+    if (!region || !type){ UI.toast('地区和类型都选一下'); return; }
+    const all = Store.getDaily('alpha', []);
+    all.unshift({ id: Util.uid(), owner: this.acct, region, type, note, ts: Date.now() });
+    Store.setDaily('alpha', all);
+    document.getElementById('alphaRegion').value = '';
+    document.getElementById('alphaType').value = '';
+    document.getElementById('alphaNote').value = '';
+    this.render();
+  },
+  del(id){
+    UI.confirm('删掉这条 Alpha 记录？', () => {
+      Store.setDaily('alpha', Store.getDaily('alpha', []).filter(x => !(x.owner === this.acct && x.id === id)));
+      this.render();
+      UI.toast('已删除');
+    }, '删除');
+  },
+  delOn(ds, id){
+    UI.confirm('删掉 ' + ds.slice(5) + ' 这条 Alpha 记录？', () => {
+      Store.set('alpha:' + ds, Store.get('alpha:' + ds, []).filter(x => !(x.owner === this.acct && x.id === id)));
+      this.render();
+      UI.toast('已删除');
+    }, '删除');
+  },
+  editNote(id){
+    const all = Store.getDaily('alpha', []);
+    const x = all.find(i => i.owner === this.acct && i.id === id);
+    if (!x) return;
+    const v = prompt('备注（留空清除）', x.note || '');
+    if (v === null) return;
+    x.note = v.trim();
+    Store.setDaily('alpha', all);
+    this.render();
+  },
+  editNoteOn(ds, id){
+    const all = Store.get('alpha:' + ds, []);
+    const x = all.find(i => i.owner === this.acct && i.id === id);
+    if (!x) return;
+    const v = prompt('备注（留空清除）', x.note || '');
+    if (v === null) return;
+    x.note = v.trim();
+    Store.set('alpha:' + ds, all);
+    this.render();
+  },
+  render(){
+    document.querySelectorAll('#alphaSeg button').forEach(b => b.classList.toggle('on', b.dataset.a === this.acct));
+    const { today, week, total } = this.stats();
+    document.getElementById('alphaSub').textContent = this.acctName() + ' · 今日已提交 ' + today + ' 个';
+    const list = this.todayList();
+    document.getElementById('alphaTodayList').innerHTML = list.length
+      ? list.map(x => '<div class="item"><div class="grow">' + Util.esc(x.region) + ' · ' + Util.esc(x.type) +
+          (x.note ? '<div class="fs13" style="color:var(--text-dim);margin-top:2px">' + Util.esc(x.note) + '</div>' : '') +
+        '</div>' +
+          '<button class="mini-btn" onclick="Alpha.editNote(\'' + x.id + '\')">✎</button>' +
+          '<button class="del" onclick="Alpha.del(\'' + x.id + '\')">✕</button></div>').join('')
+      : '<div class="empty">今天还没记，挖到一个记一个</div>';
+    document.getElementById('alphaStats').innerHTML =
+      '<div class="stat-box"><div class="num">' + today + '</div><div class="lbl">今日</div></div>' +
+      '<div class="stat-box"><div class="num">' + week + '</div><div class="lbl">近 7 天</div></div>' +
+      '<div class="stat-box"><div class="num">' + total + '</div><div class="lbl">累计</div></div>';
+    const recent = this.dates().slice(-7).reverse();
+    document.getElementById('alphaList').innerHTML = recent.length
+      ? recent.map(ds => {
+          const items = Store.get('alpha:' + ds, []).filter(x => x.owner === this.acct);
+          return items.map(x => '<div class="item"><div class="grow">' +
+            '<span class="fs12">' + ds.slice(5) + '</span> <b>' + Util.esc(x.region) + '</b> · ' + Util.esc(x.type) +
+            (x.note ? '<div class="fs13" style="color:var(--text-dim);margin-top:2px">' + Util.esc(x.note) + '</div>' : '') +
+          '</div>' +
+            '<button class="mini-btn" onclick="Alpha.editNoteOn(\'' + ds + '\',\'' + x.id + '\')">✎</button>' +
+            '<button class="del" onclick="Alpha.delOn(\'' + ds + '\',\'' + x.id + '\')">✕</button></div>').join('');
+        }).join('')
+      : '<div class="empty">暂无历史</div>';
+  }
+};
+/* ==== 功能：Alpha END ==== */
+
+
+/* ==== 功能：待办 START ==== */
+const Todo = {
+  list(){ return Store.get('todo', []); },
+  save(list){ Store.set('todo', list); },
+  daysOf(date){
+    const today = new Date(); today.setHours(0,0,0,0);
+    const target = new Date(date + 'T00:00:00');
+    return Math.round((target - today) / 864e5);
+  },
+  dayLabel(date){
+    const d = this.daysOf(date);
+    if (d > 0) return '还剩 ' + d + ' 天';
+    if (d === 0) return '就是今天';
+    return '已过 ' + (-d) + ' 天';
+  },
+  add(){
+    const el = document.getElementById('todoInput');
+    const text = el.value.trim();
+    if (!text) return;
+    const date = document.getElementById('todoDate').value || null;
+    const list = this.list();
+    list.unshift({ id: Util.uid(), text, done: false, date, ts: Date.now() });
+    this.save(list);
+    el.value = '';
+    document.getElementById('todoDate').value = '';
+    this.render();
+  },
+  toggle(id){
+    const list = this.list();
+    const it = list.find(x => x.id === id);
+    if (it){ it.done = !it.done; this.save(list); }
+    this.render();
+  },
+  del(id){
+    UI.confirm('删掉这条待办？', () => {
+      this.save(this.list().filter(x => x.id !== id));
+      this.render();
+      UI.toast('已删除');
+    }, '删除');
+  },
+  /* 最近一个未完成且有日期的目标（首页摘要用） */
+  nearest(){
+    const future = this.list().filter(x => !x.done && x.date)
+      .map(g => ({ name: g.text, days: this.daysOf(g.date) })).filter(x => x.days >= 0);
+    if (!future.length) return null;
+    future.sort((a, b) => a.days - b.days);
+    return future[0];
+  },
+  render(){
+    const list = this.list();
+    const open = list.filter(x => !x.done);
+    const done = list.filter(x => x.done);
+    document.getElementById('todoSub').textContent = open.length ? open.length + ' 件待办' : '都办完了，一身轻';
+    document.getElementById('todoList').innerHTML = open.length
+      ? open.map(x => '<div class="item">' +
+          '<button class="box" onclick="Todo.toggle(\'' + x.id + '\')"></button>' +
+          '<span class="grow">' + Util.esc(x.text) +
+            (x.date ? '<div class="fs12" style="color:var(--text-dim);margin-top:2px">📅 ' + Util.esc(x.date) + ' · <span style="color:' + (this.daysOf(x.date) < 0 ? 'var(--accent)' : 'inherit') + '">' + this.dayLabel(x.date) + '</span></div>' : '') +
+          '</span>' +
+          '<button class="del" onclick="Todo.del(\'' + x.id + '\')">✕</button></div>').join('')
+      : '<div class="empty">没有待办，挺好</div>';
+    document.getElementById('todoDoneWrap').innerHTML = done.length
+      ? '<p class="hint" style="margin:10px 0 2px">已完成 ' + done.length + ' 件</p>' +
+        done.slice(0, 10).map(x => '<div class="item done">' +
+          '<button class="box" onclick="Todo.toggle(\'' + x.id + '\')">✓</button>' +
+          '<span class="grow">' + Util.esc(x.text) + '</span>' +
+          '<button class="del" onclick="Todo.del(\'' + x.id + '\')">✕</button></div>').join('')
+      : '';
+  }
+};
+/* ==== 功能：待办 END ==== */
+
+
+/* ==== 功能：密码本 START ==== */
+const Pass = {
+  list(){ return Store.get('pass', []); },
+  shown: {},   // id -> 是否明文显示
+  add(){
+    const site = document.getElementById('passSite').value.trim();
+    const account = document.getElementById('passAccount').value.trim();
+    const pwd = document.getElementById('passPwd').value.trim();
+    const note = document.getElementById('passNote').value.trim();
+    if (!site || !account || !pwd){ UI.toast('网站、账号、密码都要填'); return; }
+    const list = this.list();
+    list.unshift({ id: Util.uid(), site, account, pwd, note, ts: Date.now() });
+    Store.set('pass', list);
+    ['passSite','passAccount','passPwd','passNote'].forEach(id => document.getElementById(id).value = '');
+    UI.toast('已存入密码本');
+    this.render();
+  },
+  del(id){
+    UI.confirm('删掉这条？删了可找不回', () => {
+      Store.set('pass', this.list().filter(x => x.id !== id));
+      this.render();
+      UI.toast('已删除');
+    }, '删除');
+  },
+  toggleShow(id){
+    this.shown[id] = !this.shown[id];
+    this.render();
+  },
+  copy(text, what){
+    const done = () => UI.toast(what + '已复制');
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(() => UI.toast('复制失败，长按手动复制'));
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); done(); } catch { UI.toast('复制失败，长按手动复制'); }
+      document.body.removeChild(ta);
+    }
+  },
+  render(){
+    const q = (document.getElementById('passSearch').value || '').trim().toLowerCase();
+    const all = this.list();
+    const list = q ? all.filter(x => (x.site + x.account + (x.note || '')).toLowerCase().includes(q)) : all;
+    document.getElementById('passCount').textContent = q ? ('（' + list.length + '/' + all.length + ' 条）') : ('（' + all.length + ' 条）');
+    document.getElementById('passList').innerHTML = list.length
+      ? list.map(x => {
+          const show = this.shown[x.id];
+          return '<div class="item"><div class="grow">' +
+            '<b>' + Util.esc(x.site) + '</b>' +
+            (x.note ? ' <span style="font-size:12px;color:var(--text-dim)">' + Util.esc(x.note) + '</span>' : '') +
+            '<div class="pwd-row" style="margin-top:5px">' +
+              '<span style="font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + Util.esc(x.account) + '</span>' +
+              '<button class="mini-btn" onclick="Pass.copy(\'' + Util.esc(x.account).replace(/'/g, "\\'") + '\',\'账号\')">复制账号</button>' +
+            '</div>' +
+            '<div class="pwd-row" style="margin-top:4px">' +
+              '<span class="mono" style="font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (show ? Util.esc(x.pwd) : '●'.repeat(Math.min(x.pwd.length, 12))) + '</span>' +
+              '<button class="mini-btn" onclick="Pass.toggleShow(\'' + x.id + '\')">' + (show ? '藏' : '看') + '</button>' +
+              '<button class="mini-btn" onclick="Pass.copy(\'' + Util.esc(x.pwd).replace(/'/g, "\\'") + '\',\'密码\')">复制</button>' +
+            '</div>' +
+          '</div><button class="del" onclick="Pass.del(\'' + x.id + '\')">✕</button></div>';
+        }).join('')
+      : (q ? '<div class="empty">没搜到，换个词</div>' : '<div class="empty">还一条都没有</div>');
+  }
+};
+/* ==== 功能：密码本 END ==== */
+
+
+/* ==== 功能：网址 START ==== */
+const Links = {
+  list(){ return Store.get('links', []); },
+  add(){
+    const name = document.getElementById('linkName').value.trim();
+    let url = document.getElementById('linkUrl').value.trim();
+    if (!name || !url){ UI.toast('名字和网址都要填'); return; }
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    const list = this.list();
+    list.unshift({ id: Util.uid(), name, url, ts: Date.now() });
+    Store.set('links', list);
+    document.getElementById('linkName').value = '';
+    document.getElementById('linkUrl').value = '';
+    UI.toast('已入江湖');
+    this.render();
+  },
+  del(id){
+    UI.confirm('删掉这个网址？', () => {
+      Store.set('links', this.list().filter(x => x.id !== id));
+      this.render();
+      UI.toast('已删除');
+    }, '删除');
+  },
+  host(u){
+    try { return new URL(u).host.replace(/^www\./, ''); } catch { return u; }
+  },
+  render(){
+    const list = this.list();
+    document.getElementById('linkCount').textContent = '（' + list.length + ' 个）';
+    document.getElementById('linkGrid').innerHTML = list.length
+      ? list.map(x =>
+          '<div style="position:relative">' +
+            '<a class="link-card" href="' + Util.esc(x.url) + '" target="_blank" rel="noopener">' +
+              '<div class="l-ico">🔗</div>' +
+              '<div class="l-name">' + Util.esc(x.name) + '</div>' +
+              '<div class="l-host">' + Util.esc(this.host(x.url)) + '</div>' +
+            '</a>' +
+            '<button class="del" style="position:absolute;top:2px;right:8px" onclick="Links.del(\'' + x.id + '\')">✕</button>' +
+          '</div>').join('')
+      : '<div class="empty">还没有常用网址，存一个？</div>';
+  }
+};
+/* ==== 功能：网址 END ==== */
+
+
+/* ==== 功能：农历 START ==== */
+/* 排盘站地址（掌门自建站） */
+const PAIPAN_URL = 'https://shimmering-cannoli-e2410e.netlify.app/';
+
+/* 农历数据 1900-2100，由 lunar_python 提取，勿手改 */
+const LUNAR_INFO=[19416,19168,42352,21717,53856,55632,91476,22176,39632,21970,19168,42422,42192,53840,119381,46400,54944,44450,38320,84343,18800,42160,46261,27216,27968,109396,11104,38256,21234,18800,25958,54432,59984,92821,23248,11104,100067,37600,116951,51536,54432,120998,46416,22176,107956,9680,37584,53938,43344,46423,27808,46416,86869,19872,42416,83315,21168,43432,59728,27296,44710,43856,19296,43748,42352,21088,62051,55632,23383,22176,38608,19925,19152,42192,54484,53840,54616,46400,46752,103846,38320,18864,43380,42160,45690,27216,27968,44870,43872,38256,19189,18800,25776,29859,59984,27480,23232,43872,38613,37600,51552,55636,54432,55888,30034,22176,43959,9680,37584,51893,43344,46240,47780,44368,21977,19360,42416,86390,21168,43312,31060,27296,44368,23378,19296,42726,42208,53856,60005,54576,23200,30371,38608,19195,19152,42192,118966,53840,54560,56645,46496,22224,21938,18864,42359,42160,43600,111189,27936,44448,84835,37744,18936,18800,25776,92326,59984,27424,108228,43744,37600,53987,51552,54615,54432,55888,23893,22176,42704,21972,21200,43448,43344,46240,46758,44368,21920,43940,42416,21168,45683,26928,29495,27296,44368,84821,19296,42352,21732,53600,59752,54560,55968,92838,22224,19168,43476,41680,53584,62034,54560];
+/* 节气日表：每年48字符，节气序=冬至,小寒,大寒,立春,雨水,惊蛰,春分,清明,谷雨,立夏,小满,芒种,夏至,小暑,大暑,立秋,处暑,白露,秋分,寒露,霜降,立冬,小雪,大雪 */
+const JQ_STR={
+1900:'220620041906210520062106220723082308230924082307',
+1901:'220621041906210521062206220823082408240924082308',
+1902:'230621051906210621062207220824082408240924082308',
+1903:'230621052007220621072207220824092409240924082308',
+1904:'220721052006210520062106220723082308230924082307',
+1905:'220621041906210521062206220823082408240924082308',
+1906:'230621051906210621062206220824082408240924082308',
+1907:'230621052007220621072207220824092409240924082308',
+1908:'220721052006210520062106220723082308230924082307',
+1909:'220621041906210521062206220823082408240924082308',
+1910:'230621051906210621062206220824082408240924082308',
+1911:'230621052007220621072207220824092409240924082308',
+1912:'220721052006210520062106220723082308230924082207',
+1913:'220620041906210521062206220823082408230924082308',
+1914:'230621041906210521062206220824082408240924082308',
+1915:'230621052006220621062207220824082409240924082308',
+1916:'220621052006210520062106220723082308230824082207',
+1917:'220620041906210521062106220823082408230924082308',
+1918:'220621041906210521062206220824082408240924082308',
+1919:'230621052006220621062207220824082409240924082308',
+1920:'220621052006210520062106220723082308230824082207',
+1921:'220620041906210520062106220823082408230924082307',
+1922:'220621041906210521062206220824082408240924082308',
+1923:'230621051906210621062207220824082409240924082308',
+1924:'220621052006210520062106220723082308230824082207',
+1925:'220620041906210520062106220823082408230924082307',
+1926:'220621041906210521062206220823082408240924082308',
+1927:'230621051906210621062207220824082409240924082308',
+1928:'220621052006210520062106220723082308230823072207',
+1929:'220620041906210520062106220723082308230924082307',
+1930:'220621041906210521062206220823082408240924082308',
+1931:'230621051906210621062207220824082408240924082308',
+1932:'220621052006210520062106210723082308230823072207',
+1933:'220620041906210520062106220723082308230924082307',
+1934:'220621041906210521062206220823082408240924082308',
+1935:'230621051906210621062206220824082408240924082308',
+1936:'220621052006210520062106210723082308230823072207',
+1937:'220620041906210520062106220723082308230924082307',
+1938:'220621041906210521062206220823082408240924082308',
+1939:'230621051906210621062206220824082408240924082308',
+1940:'220621052006210520062106210723082308230823072207',
+1941:'220620041906210520062106220723082308230924082307',
+1942:'220621041906210521062206220823082408240924082308',
+1943:'230621051906210621062206220824082408240924082308',
+1944:'220621052006210520052106210723082308230823072207',
+1945:'220620041906210520062106220723082308230824082207',
+1946:'220620041906210521062206220823082408230924082308',
+1947:'230621041906210521062206220824082408240924082308',
+1948:'220621052005210520052106210723072308230823072207',
+1949:'220520041906210520062106220723082308230824082207',
+1950:'220620041906210520062106220823082408230924082308',
+1951:'230621041906210521062206220824082408240924082308',
+1952:'220621052005210520052106210723072308230823072207',
+1953:'220520041906210520062106220723082308230824082207',
+1954:'220620041906210520062106220823082408230924082307',
+1955:'220621041906210521062206220823082408240924082308',
+1956:'220621052005200520052106210723072308230823072207',
+1957:'220520041906210520062106220723082308230824082207',
+1958:'220620041906210520062106220723082308230924082307',
+1959:'220621041906210521062206220823082408240924082308',
+1960:'220621051905200520052106210723072307230823072207',
+1961:'220520041906210520062106210723082308230823072207',
+1962:'220620041906210520062106220723082308230924082307',
+1963:'220621041906210521062206220823082408240924082308',
+1964:'220621051905200520052106210723072307230823072207',
+1965:'220520041906210520062106210723082308230823072207',
+1966:'220620041906210520062106220723082308230924082307',
+1967:'220621041906210521062206220823082408240924082308',
+1968:'220621051905200520052105210723072307230823072207',
+1969:'220520041906210520062106210723082308230823072207',
+1970:'220620041906210520062106220723082308230924082307',
+1971:'220621041906210521062206220823082408240924082308',
+1972:'220621051905200520052105210723072307230823072207',
+1973:'220520041906210520052106210723082308230823072207',
+1974:'220620041906210520062106220723082308230924082307',
+1975:'220621041906210521062206220823082408230924082308',
+1976:'220621051905200420052105210723072307230823072207',
+1977:'220520041906210520052106210723072308230823072207',
+1978:'220620041906210520062106220723082308230824082307',
+1979:'220620041906210521062106220823082408230924082308',
+1980:'220621051905200420052105210723072307230823072207',
+1981:'220520041906210520052106210723072308230823072207',
+1982:'220620041906210520062106220723082308230824082207',
+1983:'220620041906210520062106220823082408230924082308',
+1984:'220621041905200420052105210722072307230823072207',
+1985:'220520041905210520052106210723072308230823072207',
+1986:'220520041906210520062106220723082308230824082207',
+1987:'220620041906210520062106220723082408230924082307',
+1988:'210621041905200420052105210722072307230823072207',
+1989:'220520041905200520052106210723072307230823072207',
+1990:'220520041906210520062106210723082308230824082207',
+1991:'220620041906210520062106220723082308230924082307',
+1992:'210621041905200420052105210722072307230823072207',
+1993:'220520041805200520052106210723072307230823072207',
+1994:'220520041906210520062106210723082308230823072207',
+1995:'220620041906210520062106220723082308230924082307',
+1996:'210621041905200420052105210722072307230823072207',
+1997:'220520041805200520052105210723072307230823072207',
+1998:'220520041906210520062106210723082308230823072207',
+1999:'220620041906210520062106220723082308230924082307',
+2000:'210621041905200420052105210722072307230823072207',
+2001:'220520041805200520052105210723072307230823072207',
+2002:'220520041906210520062106210723082308230823072207',
+2003:'220620041906210520062106220723082308230924082307',
+2004:'210621041905200420052105210722072307230823072207',
+2005:'220520041805200520052105210723072307230823072207',
+2006:'220520041906210520052106210723072308230823072207',
+2007:'220620041906210520062106220723082308230924082307',
+2008:'210621041905200420052105210722072307220823072207',
+2009:'220520041805200420052105210723072307230823072207',
+2010:'220520041906210520052106210723072308230823072207',
+2011:'220620041906210520062106220723082308230824082307',
+2012:'210621041905200420052005210722072307220823072207',
+2013:'220520041805200420052105210722072307230823072207',
+2014:'220520041906210520052106210723072308230823072207',
+2015:'220620041906210520062106220723082308230824082207',
+2016:'210620041905200419052005210722072307220823072207',
+2017:'220520031805200420052105210722072307230823072207',
+2018:'220520041905210520052106210723072308230823072207',
+2019:'220520041906210520062106210723082308230824082207',
+2020:'210620041905200419052005210622072207220823072207',
+2021:'210520031805200420052105210722072307230823072207',
+2022:'220520041905200520052106210723072307230823072207',
+2023:'220520041906210520062106210723082308230824082207',
+2024:'210620041905200419052005210622072207220823072206',
+2025:'210520031805200420052105210722072307230823072207',
+2026:'220520041805200520052105210723072307230823072207',
+2027:'220520041906210520062106210723082308230823072207',
+2028:'210620041905200419052005210622072207220823072206',
+2029:'210520031805200420052105210722072307230823072207',
+2030:'220520041805200520052105210723072307230823072207',
+2031:'220520041906210520062106210723082308230823072207',
+2032:'210620041905200419052005210622072207220823072206',
+2033:'210520031805200420052105210722072307230823072207',
+2034:'220520041805200520052105210723072307230823072207',
+2035:'220520041906210520052106210723072308230823072207',
+2036:'210620041905200419052005210622072207220823072206',
+2037:'210520031805200420052105210722072307230823072207',
+2038:'220520041805200520052105210723072307230823072207',
+2039:'220520041906210520052106210723072308230823072207',
+2040:'210620041905200419052005210622072207220823072206',
+2041:'210520031805200420052005210722072307220823072207',
+2042:'220520041805200420052105210723072307230823072207',
+2043:'220520041906210520052106210723072308230823072207',
+2044:'210620041905200419052005210622072207220723072206',
+2045:'210520031805200419052005210722072307220823072207',
+2046:'220520041805200420052105210722072307230823072207',
+2047:'220520041906210520052106210723072308230823072207',
+2048:'210620041905200419052005200622072207220723072106',
+2049:'210519031805200419052005210622072207220823072207',
+2050:'220520031805200420052105210722072307230823072207',
+2051:'220520041905200520052106210723072307230823072207',
+2052:'210520041905200419052005200622072207220723072106',
+2053:'210519031805200419052005210622072207220823072207',
+2054:'220520031805200420052105210722072307230823072207',
+2055:'220520041905200520052105210723072307230823072207',
+2056:'210520041905200419052005200622072207220723072106',
+2057:'210519031805200419052005210622072207220823072206',
+2058:'210520031805200420052105210722072307230823072207',
+2059:'220520041905200520052105210723072307230823072207',
+2060:'210520041905200419052005200622072207220722062106',
+2061:'210519031805200419052005210622072207220823072206',
+2062:'210520031805200420052105210722072307230823072207',
+2063:'220520041805200520052105210723072307230823072207',
+2064:'210520041905200419052005200622072207220722062106',
+2065:'210519031805200419052005210622072207220823072206',
+2066:'210520031805200420052105210722072307230823072207',
+2067:'220520041805200520052105210723072307230823072207',
+2068:'210520041905200419042005200622062207220722062106',
+2069:'210519031805200419052005210622072207220823072206',
+2070:'210520031805200420052005210722072307220823072207',
+2071:'220520041805200520052105210723072307230823072207',
+2072:'210520041905200419042005200622062207220722062106',
+2073:'210519031805200419052005210622072207220723072206',
+2074:'210520031805200420052005210722072307220823072207',
+2075:'220520041805200420052105210722072307230823072207',
+2076:'210520041905200419042005200622062207220722062106',
+2077:'210519031805200419052005210622072207220723072206',
+2078:'210520031805200419052005210622072307220823072207',
+2079:'220520041805200420052105210722072307230823072207',
+2080:'210520041905200419042005200622062207220722062106',
+2081:'210519031805200419052005200622072207220723072106',
+2082:'210520031805200419052005210622072207220823072207',
+2083:'220520031805200420052105210722072307230823072207',
+2084:'210520041904190419042005200622062206220722062106',
+2085:'210419031805200419052005200622072207220723072106',
+2086:'210519031805200419052005210622072207220823072207',
+2087:'220520031805200420052105210722072307230823072207',
+2088:'210520041904190419042004200622062206220722062106',
+2089:'210419031805200419052005200622072207220723072106',
+2090:'210519031805200419052005210622072207220823072206',
+2091:'210520031805200420052105210722072307230823072207',
+2092:'210520041904190419042004200622062206220722062106',
+2093:'210419031805200419052005200622072207220722062106',
+2094:'210519031805200419052005210622072207220823072206',
+2095:'210520031805200420052105210722072307230823072207',
+2096:'210520041804190419042004200622062206220722062106',
+2097:'210419031805200419052005200622062207220722062106',
+2098:'210519031805200419052005210622072207220823072206',
+2099:'210520031805200420052105210722072307230823072207',
+2100:'220520041805200520052105210723072307230823072207',
+};
+
+/* --- 农历与干支算法 --- */
+const Lunar = {
+  GAN: '甲乙丙丁戊己庚辛壬癸',
+  ZHI: '子丑寅卯辰巳午未申酉戌亥',
+  JQ_NAMES: ['冬至','小寒','大寒','立春','雨水','惊蛰','春分','清明','谷雨','立夏','小满','芒种','夏至','小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪'],
+  JQ_MONTHS: [12,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12],
+  JIE: {1:'小寒',2:'立春',3:'惊蛰',4:'清明',5:'立夏',6:'芒种',7:'小暑',8:'立秋',9:'白露',10:'寒露',11:'立冬',12:'大雪'},
+  BRANCH_OF_JIE: {1:1,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,11:11,12:0},
+  MONTH_CN: ['正','二','三','四','五','六','七','八','九','十','冬','腊'],
+
+  jieqiDay(y, name){
+    const s = JQ_STR[y]; if (!s) return null;
+    const i = this.JQ_NAMES.indexOf(name);
+    return { m: this.JQ_MONTHS[i], d: parseInt(s.substr(i*2, 2), 10) };
+  },
+  jieqiOfDay(y, m, d){
+    const s = JQ_STR[y]; if (!s) return null;
+    for (let i = 0; i < 24; i++){
+      if (this.JQ_MONTHS[i] === m && parseInt(s.substr(i*2, 2), 10) === d) return this.JQ_NAMES[i];
+    }
+    return null;
+  },
+
+  /* 年柱：立春换年（命理口径） */
+  yearGanZhiIdx(y, m, d){
+    const lc = this.jieqiDay(y, '立春');
+    let gy = y;
+    if (m < lc.m || (m === lc.m && d < lc.d)) gy = y - 1;
+    return ((gy - 4) % 60 + 60) % 60;
+  },
+  gzYear(y, m, d){
+    const idx = this.yearGanZhiIdx(y, m, d);
+    return this.GAN[idx % 10] + this.ZHI[idx % 12];
+  },
+  /* 月柱：12 节换月，五虎遁起月干 */
+  gzMonth(y, m, d){
+    const jd = this.jieqiDay(y, this.JIE[m]);
+    const branch = (d >= jd.d) ? this.BRANCH_OF_JIE[m] : this.BRANCH_OF_JIE[m === 1 ? 12 : m - 1];
+    const yg = this.yearGanZhiIdx(y, m, d) % 10;
+    const yinGan = ((yg % 5) * 2 + 2) % 10;
+    const n = (branch - 2 + 12) % 12;
+    return this.GAN[(yinGan + n) % 10] + this.ZHI[branch];
+  },
+  /* 日柱：2000-01-01 = 戊午(54)；hour>=23 时按子初换日 +1 */
+  dayGanZhiIdx(y, m, d, hour = 12){
+    let diff = Math.floor((Date.UTC(y, m-1, d) - Date.UTC(2000, 0, 1)) / 864e5);
+    if (hour >= 23) diff += 1;
+    return ((54 + diff) % 60 + 60) % 60;
+  },
+  gzDay(y, m, d, hour = 12){
+    const idx = this.dayGanZhiIdx(y, m, d, hour);
+    return this.GAN[idx % 10] + this.ZHI[idx % 12];
+  },
+  /* 时柱：五鼠遁 */
+  gzHourByBranch(dayGan, branch){
+    return this.GAN[((dayGan % 5) * 2 + branch) % 10] + this.ZHI[branch];
+  },
+  fourPillars(y, m, d, hourBranch){
+    const dayG = this.dayGanZhiIdx(y, m, d) % 10;
+    return {
+      y: this.gzYear(y, m, d),
+      m: this.gzMonth(y, m, d),
+      d: this.gzDay(y, m, d),
+      h: hourBranch >= 0 ? this.gzHourByBranch(dayG, hourBranch) : null
+    };
+  },
+
+  /* 农历换算 */
+  leapMonth(y){ return LUNAR_INFO[y - 1900] & 0xf; },
+  leapDays(y){
+    if (!this.leapMonth(y)) return 0;
+    return (LUNAR_INFO[y - 1900] & 0x10000) ? 30 : 29;
+  },
+  monthDays(y, m){ return (LUNAR_INFO[y - 1900] & (0x10000 >> m)) ? 30 : 29; },
+  yearDays(y){
+    let sum = 348;
+    const info = LUNAR_INFO[y - 1900];
+    for (let bit = 0x8000; bit > 0x8; bit >>= 1) if (info & bit) sum += 1;
+    return sum + this.leapDays(y);
+  },
+  solarToLunar(y, m, d){
+    let offset = Math.floor((Date.UTC(y, m-1, d) - Date.UTC(1900, 0, 31)) / 864e5);
+    let ly = 1900, daysOfYear = 0;
+    for (; ly < 2101 && offset > 0; ly++){
+      daysOfYear = this.yearDays(ly);
+      offset -= daysOfYear;
+    }
+    if (offset < 0){ offset += daysOfYear; ly--; }
+    const leap = this.leapMonth(ly);
+    let isLeap = false, daysOfMonth = 0, lm = 1;
+    for (; lm < 13 && offset > 0; lm++){
+      if (leap > 0 && lm === leap + 1 && !isLeap){
+        --lm; isLeap = true;
+        daysOfMonth = this.leapDays(ly);
+      } else {
+        daysOfMonth = this.monthDays(ly, lm);
+      }
+      offset -= daysOfMonth;
+      if (isLeap && lm === leap + 1) isLeap = false;
+    }
+    if (offset === 0 && leap > 0 && lm === leap + 1){
+      if (isLeap){ isLeap = false; } else { isLeap = true; --lm; }
+    }
+    if (offset < 0){ offset += daysOfMonth; --lm; }
+    return { year: ly, month: lm, day: offset + 1, isLeap };
+  },
+  dayCn(d){
+    const tens = ['初','十','廿','卅'];
+    const ones = ['','一','二','三','四','五','六','七','八','九','十'];
+    if (d === 10) return '初十';
+    if (d === 20) return '二十';
+    if (d === 30) return '三十';
+    return tens[Math.floor((d-1)/10)] + ones[d % 10];
+  },
+  monthCn(m, isLeap){ return (isLeap ? '闰' : '') + this.MONTH_CN[m-1] + '月'; },
+  lunarText(y, m, d){
+    const l = this.solarToLunar(y, m, d);
+    return '农历' + this.monthCn(l.month, l.isLeap) + this.dayCn(l.day);
+  },
+  todayGZ(){
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth()+1, d = now.getDate();
+    return {
+      year: this.gzYear(y, m, d),
+      month: this.gzMonth(y, m, d),
+      day: this.gzDay(y, m, d),
+      lunarText: this.lunarText(y, m, d)
+    };
+  }
+};
+
+/* --- 农历日历页 --- */
+const LunarPage = {
+  cur: null, sel: null,
+  render(){
+    const now = new Date();
+    if (!this.cur) this.cur = { y: now.getFullYear(), m: now.getMonth()+1 };
+    const gz = Lunar.todayGZ();
+    document.getElementById('lunarGzDay').textContent = gz.day + '日';
+    document.getElementById('lunarGzSub').innerHTML = gz.year + '年 · ' + gz.month + '月<br>' + gz.lunarText;
+    document.getElementById('lunarTodaySub').textContent = gz.lunarText;
+    this.renderCal();
+    Bazi.render();
+  },
+  shift(n){
+    let { y, m } = this.cur;
+    m += n;
+    if (m < 1){ m = 12; y--; }
+    if (m > 12){ m = 1; y++; }
+    if (y < 1900 || y > 2100){ UI.toast('只能查 1900-2100 年'); return; }
+    this.cur = { y, m };
+    this.sel = null;
+    this.renderCal();
+  },
+  renderCal(){
+    const { y, m } = this.cur;
+    document.getElementById('calYm').textContent = y + '年' + m + '月';
+    const startWeekday = (new Date(y, m-1, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const todayStr = Util.today();
+    const baziDays = Bazi.daySet(y, m);
+    let html = '';
+    for (let i = 0; i < startWeekday; i++) html += '<div></div>';
+    for (let d = 1; d <= daysInMonth; d++){
+      const l = Lunar.solarToLunar(y, m, d);
+      const jq = Lunar.jieqiOfDay(y, m, d);
+      const ds = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const sub = jq ? jq : (l.day === 1 ? Lunar.monthCn(l.month, l.isLeap) : Lunar.dayCn(l.day));
+      html += '<div class="cal-cell' + (ds === todayStr ? ' today' : '') + (this.sel === d ? ' sel' : '') + '" onclick="LunarPage.select(' + d + ')">' +
+        '<div class="sd">' + d + '</div>' +
+        '<div class="ld' + (jq ? ' jq' : '') + '">' + sub + '</div>' +
+        (baziDays.has(d) ? '<div class="dot"></div>' : '') +
+      '</div>';
+    }
+    document.getElementById('calGrid').innerHTML = html;
+    this.renderDetail();
+  },
+  select(d){
+    this.sel = (this.sel === d) ? null : d;
+    this.renderCal();
+  },
+  renderDetail(){
+    const box = document.getElementById('calDetail');
+    if (!this.sel){ box.innerHTML = ''; return; }
+    const { y, m } = this.cur, d = this.sel;
+    const week = '日一二三四五六'[new Date(y, m-1, d).getDay()];
+    const jq = Lunar.jieqiOfDay(y, m, d);
+    box.innerHTML = '<div style="text-align:center;line-height:2.1">' +
+      '<b>' + m + '月' + d + '日</b> 星期' + week + (jq ? ' · <b style="color:var(--accent)">' + jq + '</b>' : '') + '<br>' +
+      '<span class="pill">' + Lunar.gzYear(y,m,d) + '年</span>' +
+      '<span class="pill">' + Lunar.gzMonth(y,m,d) + '月</span>' +
+      '<span class="pill">' + Lunar.gzDay(y,m,d) + '日</span><br>' +
+      '<span style="font-size:13px;color:var(--text-dim)">' + Lunar.lunarText(y,m,d) + '</span></div>';
+  }
+};
+
+/* --- 八字记录 --- */
+const Bazi = {
+  list(){ return Store.get('bazi', []); },
+  daySet(y, m){
+    const s = new Set();
+    this.list().forEach(b => { if (b.y === y && b.m === m) s.add(b.d); });
+    return s;
+  },
+  add(){
+    const name = document.getElementById('baziName').value.trim();
+    const y = parseInt(document.getElementById('baziYear').value, 10);
+    const m = parseInt(document.getElementById('baziMonth').value, 10);
+    const d = parseInt(document.getElementById('baziDay').value, 10);
+    const hb = parseInt(document.getElementById('baziHour').value, 10);
+    const note = document.getElementById('baziNote').value.trim();
+    if (!y || !m || !d){ UI.toast('把年月日填全'); return; }
+    if (y < 1900 || y > 2100 || m < 1 || m > 12 || d < 1 || d > new Date(y, m, 0).getDate()){ UI.toast('日期不对'); return; }
+    const gz = Lunar.fourPillars(y, m, d, hb);
+    const list = this.list();
+    list.unshift({ id: Util.uid(), name: name || '未命名', y, m, d, hb, note, gz, ts: Date.now() });
+    Store.set('bazi', list);
+    ['baziName','baziYear','baziMonth','baziDay','baziNote'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('baziHour').value = '-1';
+    UI.toast('已存档：' + gz.y + ' ' + gz.m + ' ' + gz.d + (gz.h ? ' ' + gz.h : ''));
+    this.render();
+    LunarPage.renderCal();
+  },
+  del(id){
+    UI.confirm('删掉这条八字记录？', () => {
+      Store.set('bazi', this.list().filter(b => b.id !== id));
+      this.render();
+      LunarPage.renderCal();
+      UI.toast('已删除');
+    }, '删除');
+  },
+  render(){
+    const list = this.list();
+    document.getElementById('baziList').innerHTML = list.length
+      ? list.map(b => '<div class="item"><div class="grow">' +
+          '<b>' + Util.esc(b.name) + '</b> <span style="font-size:12px;color:var(--text-dim)">' + b.y + '-' + b.m + '-' + b.d + (b.hb >= 0 ? ' ' + Lunar.ZHI[b.hb] + '时' : '') + '</span><br>' +
+          '<span class="pill">' + b.gz.y + '</span><span class="pill">' + b.gz.m + '</span><span class="pill">' + b.gz.d + '</span>' + (b.gz.h ? '<span class="pill">' + b.gz.h + '</span>' : '') +
+          (b.note ? '<div style="font-size:12px;color:var(--text-dim);margin-top:3px">' + Util.esc(b.note) + '</div>' : '') +
+          '<div style="margin-top:6px"><a class="mini-btn" style="text-decoration:none;display:inline-block" href="' + PAIPAN_URL + '" target="_blank" rel="noopener">去排盘站分析 →</a></div>' +
+        '</div><button class="del" onclick="Bazi.del(\'' + b.id + '\')">✕</button></div>').join('')
+      : '<div class="empty">还没有存档，排一个试试</div>';
+  }
+};
+/* ==== 功能：农历 END ==== */
+
+
+/* ==== 功能：主题 START ==== */
+const Theme = {
+  key: 'theme',            // 'day' | 'night'（手动选择）
+  autoKey: 'themeAuto',    // 是否跟随时间自动切换，默认开
+  current: 'day',
+
+  init(){
+    const auto = Store.get(this.autoKey, true);
+    const t = auto ? this.byTime() : (Store.get(this.key) || this.byTime());
+    this.apply(t, false);
+  },
+  byTime(){
+    const h = new Date().getHours();
+    return (h >= 19 || h < 7) ? 'night' : 'day';
+  },
+  apply(t, save = true){
+    this.current = t;
+    document.body.classList.toggle('night', t === 'night');
+    const btn = document.getElementById('themeBtn');
+    if (btn) btn.textContent = t === 'night' ? '☀️' : '🌙';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = t === 'night' ? '#221c17' : '#5c4a3d';
+    if (save) Store.set(this.key, t);
+  },
+  toggle(){
+    // 手动切换后关闭自动，尊重用户当前选择（设置页可再开）
+    Store.set(this.autoKey, false);
+    const chk = document.getElementById('autoThemeChk');
+    if (chk) chk.checked = false;
+    this.apply(this.current === 'night' ? 'day' : 'night');
+  },
+  setAuto(on){
+    Store.set(this.autoKey, on);
+    if (on) this.apply(this.byTime());
+    UI.toast(on ? '已开启按时间自动切换' : '已关闭自动切换');
+  }
+};
+/* ==== 功能：主题 END ==== */
+
+
+/* ==== 功能：首页 START ==== */
+/* --- 语录 --- */
+const Quote = {
+  DEFAULTS: [
+    '一切福田，不离方寸',
+    '时来天地皆同力，运去英雄不自由',
+    '知命者不怨天，知己者不怨人',
+    '站桩站的是桩，定的是心',
+    '方寸之间，自有天地'
+  ],
+  list(){ return Store.get('quotes', this.DEFAULTS.slice()); },
+  render(){
+    const list = this.list();
+    const idx = Store.get('quoteIdx', Math.floor(Math.random() * list.length));
+    this.show(idx);
+  },
+  show(i){
+    const list = this.list();
+    if (!list.length){ document.getElementById('quoteText').textContent = '语录库空了，加一句吧'; return; }
+    const idx = ((i % list.length) + list.length) % list.length;
+    Store.set('quoteIdx', idx);
+    document.getElementById('quoteText').textContent = list[idx];
+  },
+  next(){
+    const list = this.list();
+    if (!list.length) return;
+    this.show(Store.get('quoteIdx', 0) + 1);
+  },
+  add(){
+    const el = document.getElementById('quoteInput');
+    const text = el.value.trim();
+    if (!text) return;
+    const list = this.list();
+    list.push(text);
+    Store.set('quotes', list);
+    el.value = '';
+    UI.toast('已存入语录库（共 ' + list.length + ' 条）');
+    this.show(list.length - 1);
+  }
+};
+
+/* --- 首页聚合 --- */
+const Home = {
+  render(){
+    // 干支卡
+    const now = new Date();
+    const gz = Lunar.todayGZ();
+    document.getElementById('homeGzDay').textContent = gz.day + '日';
+    document.getElementById('homeGzSub').innerHTML =
+      gz.year + '年 · ' + gz.month + '月<br>' +
+      gz.lunarText + ' · ' + (now.getMonth()+1) + '月' + now.getDate() + '日 ' +
+      ['周日','周一','周二','周三','周四','周五','周六'][now.getDay()];
+
+    // 语录
+    Quote.render();
+
+    // 今日一览（各模块提供 stats()，没启用时显示 0）
+    const zs = (typeof Zhan  !== 'undefined') ? Zhan.stats()  : {streak:0, total:0};
+    const as = (typeof Alpha !== 'undefined') ? Alpha.statsFor('bing') : {today:0, week:0};
+    const gs = (typeof Todo  !== 'undefined') ? Todo.nearest() : null;
+    document.getElementById('homeStats').innerHTML = `
+      <div class="stat-box"><div class="num">${zs.streak}</div><div class="lbl">站桩连续天</div></div>
+      <div class="stat-box"><div class="num">${as.today}</div><div class="lbl">今日 Alpha</div></div>
+      <div class="stat-box"><div class="num">${gs ? gs.days : '—'}</div><div class="lbl">${gs ? '天后·' + Util.esc(gs.name) : '无倒计时'}</div></div>`;
+  }
+};
+/* ==== 功能：首页 END ==== */
+
+
+App.init();
+</script>
+</body>
+</html>

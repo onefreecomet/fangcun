@@ -1,0 +1,19 @@
+{
+  "name": "方寸",
+  "short_name": "方寸",
+  "description": "方寸之间，自有天地",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2ece1",
+  "theme_color": "#5c4a3d",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
