@@ -45,7 +45,7 @@
 ## 目录结构
 
 ```
-bys-personal-dashboard/
+fangcun-personal-dashboard/
 ├── SKILL.md                      # 主流程（10 步 + 4 道检查点 + 失败分支）
 ├── references/
 │   ├── interview-guide.md        # 怎么访谈、怎么把生活场景翻译成功能
