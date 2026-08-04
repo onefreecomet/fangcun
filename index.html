@@ -29,28 +29,42 @@
 <style>
 /* ==== 主题变量 · 国风日夜双主题（宣纸 / 玄夜） ==== */
 :root{
-  --bg:#f2ece1;
-  --sidebar:#5c4a3d;
-  --sidebar-text:#f2ece1;
-  --sidebar-active:#7a6455;
-  --card:#fdfaf4;
-  --text:#3b322b;
-  --text-dim:#8c7f73;
-  --accent:#a8443a;
-  --radius:8px;
-  --shadow:0 2px 10px rgba(90,70,50,.10);
+  --bg:#efe7d7;
+  --sidebar:#57463a;
+  --sidebar-text:#efe7d7;
+  --sidebar-active:#6e5b4c;
+  --card:#fbf7ec;
+  --text:#3a3128;
+  --text-dim:#8a7a68;
+  --accent:#a63c2e;
+  /* 国风语义色：纸 / 墨 / 朱砂 / 发丝 */
+  --paper:#f6efdf;
+  --paper-deep:#ece2cb;
+  --ink:#3a3128;
+  --seal:#a63c2e;
+  --hair:rgba(122,100,72,.22);
+  --hair-soft:rgba(122,100,72,.12);
+  --radius:12px;
+  --radius-sm:8px;
+  --shadow:0 1px 0 rgba(122,100,72,.06), 0 4px 18px rgba(90,70,50,.09);
   --font:"Songti SC","STSong","Noto Serif SC",serif;
 }
 body.night{
-  --bg:#191512;
-  --sidebar:#221c17;
-  --sidebar-text:#b8a48c;
-  --sidebar-active:#3d332a;
-  --card:#262019;
-  --text:#ece2d0;
-  --text-dim:#9a8a74;
+  --bg:#16120e;
+  --sidebar:#1f1913;
+  --sidebar-text:#c9b89f;
+  --sidebar-active:#3a2e21;
+  --card:#241d15;
+  --text:#eadfc9;
+  --text-dim:#98876e;
   --accent:#c8553d;
-  --shadow:0 0 0 1px rgba(255,240,220,.07);
+  --paper:#2a2218;
+  --paper-deep:#1f1913;
+  --ink:#eadfc9;
+  --seal:#c8553d;
+  --hair:rgba(200,175,140,.18);
+  --hair-soft:rgba(200,175,140,.09);
+  --shadow:0 0 0 1px rgba(230,205,170,.07), 0 6px 22px rgba(0,0,0,.35);
 }
 
 /* ==== 基础 ==== */
@@ -59,6 +73,12 @@ html,body{height:100%}
 body{
   font-family:var(--font); background:var(--bg); color:var(--text);
   overflow:hidden; transition:background .25s;
+}
+/* 玄夜模式：墨色晕染背景 */
+body.night{
+  background-image:radial-gradient(ellipse at 20% 0%, rgba(120,90,60,.14), transparent 55%),
+                   radial-gradient(ellipse at 85% 100%, rgba(120,80,50,.10), transparent 50%);
+  background-attachment:fixed;
 }
 .app{display:flex;height:100%}
 
@@ -69,20 +89,33 @@ body{
   padding:calc(12px + env(safe-area-inset-top,0)) 6px calc(12px + env(safe-area-inset-bottom,0));
   overflow-y:auto;-webkit-overflow-scrolling:touch;
   transition:background .25s;
+  background-image:linear-gradient(160deg, rgba(255,244,224,.04), transparent 40%);
 }
 .side::-webkit-scrollbar{display:none}
 .brand{width:100%;border:none;background:transparent;cursor:pointer;text-align:center;margin-bottom:14px;flex-shrink:0;padding:8px 2px;border-radius:10px;font-family:inherit}
 .brand .logo{font-size:26px;line-height:1}
 .brand .name{font-size:12px;color:var(--sidebar-text);opacity:.9;margin-top:4px;line-height:1.3;word-break:break-all;letter-spacing:1px}
 .brand.on{background:var(--sidebar-active)}
-.nav{display:flex;flex-direction:column;gap:4px}
+.nav{display:flex;flex-direction:column;gap:2px}
 .nav button{
   border:none;background:transparent;font-family:inherit;
   padding:10px 2px;border-radius:10px;
   color:var(--sidebar-text);font-size:11px;line-height:1.3;
+  position:relative;transition:background .15s;
 }
-.nav button .ico{display:block;font-size:21px;margin-bottom:3px}
-.nav button.on{background:var(--sidebar-active)}
+.nav button .ico{display:block;font-size:21px;margin-bottom:3px;line-height:1}
+.nav button .ico svg{width:22px;height:22px;display:block;margin:0 auto}
+.nav button .ico svg *{stroke:currentColor}
+/* 选中态：左侧朱砂竖条 + 底色 */
+.nav button.on{
+  background:linear-gradient(90deg, rgba(166,60,46,.16), rgba(166,60,46,.04));
+  color:var(--sidebar-text);font-weight:600;
+}
+body.night .nav button.on{background:linear-gradient(90deg, rgba(200,85,61,.2), rgba(200,85,61,.05))}
+.nav button.on::before{
+  content:"";position:absolute;left:-6px;top:20%;bottom:20%;width:3px;
+  background:var(--accent);border-radius:2px;
+}
 .theme-btn{
   margin-top:auto;flex-shrink:0;border:none;background:rgba(255,255,255,.08);
   border-radius:10px;padding:9px 2px;font-size:18px;line-height:1;
@@ -96,12 +129,23 @@ body.night .theme-btn{background:rgba(255,255,255,.06)}
 }
 .page{display:none;flex-direction:column;gap:12px}
 .page.on{display:flex}
-.page-title{font-size:22px;font-weight:600;margin-bottom:2px;letter-spacing:1px}
-.page-sub{font-size:13px;color:var(--text-dim);margin-top:-8px;margin-bottom:2px}
+.page-title{
+  font-size:24px;font-weight:600;margin-bottom:2px;letter-spacing:3px;
+  display:flex;align-items:center;gap:10px;
+}
+/* 页面标题左侧朱砂短横 + 右侧发丝线 */
+.page-title::before{content:"";width:5px;height:22px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.page-sub{font-size:13px;color:var(--text-dim);margin-top:-8px;margin-bottom:2px;padding-left:15px}
 
-/* ==== 卡片 ==== */
-.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;transition:background .25s}
-.card h2{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px;letter-spacing:1px}
+/* ==== 卡片：宣纸质感 ==== */
+.card{
+  background:var(--card);border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  border:1px solid var(--hair-soft);
+  padding:18px 16px;transition:background .25s;
+  position:relative;
+}
+.card h2{font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px;letter-spacing:2px;color:var(--text)}
 /* 国风识别特征：标题左侧朱砂竖线 */
 .card h2::before{content:"";width:3px;height:15px;background:var(--accent);border-radius:2px;flex-shrink:0}
 .hint{font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5}
@@ -110,24 +154,37 @@ body.night .theme-btn{background:rgba(255,255,255,.06)}
 /* ==== 表单：字号必须 >=16px，否则 iOS 会自动放大整页 ==== */
 input,textarea,select{
   width:100%;font-size:16px;font-family:inherit;color:var(--text);
-  padding:11px 13px;border:1px solid rgba(128,128,128,.28);
-  border-radius:calc(var(--radius) - 6px);background:transparent;
+  padding:11px 13px;border:1px solid var(--hair);
+  border-radius:var(--radius-sm);background:transparent;
+  transition:border-color .2s, box-shadow .2s;
 }
+input:focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(166,60,46,.12);
+}
+body.night input:focus,body.night textarea:focus,body.night select:focus{box-shadow:0 0 0 3px rgba(200,85,61,.15)}
 textarea{min-height:88px;resize:vertical;line-height:1.6}
 input::placeholder,textarea::placeholder{color:var(--text-dim)}
 .btn{
   padding:11px 18px;font-size:15px;font-family:inherit;white-space:nowrap;
-  border:none;border-radius:calc(var(--radius) - 6px);
-  background:var(--accent);color:#fff;letter-spacing:1px;
+  border:none;border-radius:var(--radius-sm);
+  background:linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 88%, #000));
+  color:#fff;letter-spacing:1px;position:relative;overflow:hidden;
+  transition:transform .1s, opacity .2s;
 }
-.btn.ghost{background:transparent;color:var(--text);border:1px solid rgba(128,128,128,.3)}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--hair)}
 .btn.danger{background:#d9534f}
-.btn:active{opacity:.75}
+/* 按压墨晕 */
+.btn:active::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at center, rgba(255,255,255,.28), transparent 60%);
+}
+.btn:active{transform:translateY(1px)}
 .row{display:flex;gap:8px;align-items:center}
 .row .btn{flex-shrink:0}
 
 /* ==== 列表 ==== */
-.item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed rgba(128,128,128,.22)}
+.item{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px dashed var(--hair-soft)}
 .item:last-child{border-bottom:none}
 .item .grow{flex:1;min-width:0}
 .item .del{color:var(--text-dim);font-size:16px;background:none;border:none;padding:0 4px;flex-shrink:0}
@@ -140,15 +197,38 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
 .item.done .box{background:var(--accent)}
 .item.done .grow{text-decoration:line-through;color:var(--text-dim)}
 
-/* ==== 提示条 ==== */
-.banner{
-  background:var(--accent);color:#fff;padding:11px 14px;
-  border-radius:var(--radius);font-size:13px;line-height:1.5;
-  display:flex;align-items:center;gap:10px;
+/* ==== 语录：上下引号装饰 ==== */
+.quote{
+  font-size:18px;line-height:2;letter-spacing:1.5px;padding:4px 6px;
+  color:var(--text);position:relative;text-align:center;
 }
+.quote::before{content:"「";color:var(--accent);opacity:.75;font-size:20px;margin-right:4px}
+.quote::after{content:"」";color:var(--accent);opacity:.75;font-size:20px;margin-left:4px}
+.quote-src{font-size:12px;color:var(--text-dim);margin:8px 0;text-align:right}
+
+/* ==== 提示条：宣纸便条 ==== */
+.banner{
+  background:linear-gradient(180deg, var(--paper), var(--paper-deep));
+  color:var(--text);padding:13px 16px;
+  border:1px dashed rgba(166,60,46,.35);
+  border-radius:var(--radius-sm);font-size:13px;line-height:1.6;
+  display:flex;align-items:center;gap:10px;
+  position:relative;
+  box-shadow:0 1px 6px rgba(90,70,50,.07);
+}
+/* 便条右下角小折角 */
+.banner::after{
+  content:"";position:absolute;right:0;bottom:0;
+  width:0;height:0;border-style:solid;
+  border-width:0 0 14px 14px;
+  border-color:transparent transparent rgba(166,60,46,.14) transparent;
+  border-bottom-left-radius:2px;
+}
+body.night .banner{border-color:rgba(200,85,61,.4)}
 .banner button{
-  margin-left:auto;flex-shrink:0;background:rgba(255,255,255,.22);color:#fff;
-  border:none;padding:6px 12px;border-radius:8px;font-size:13px;font-family:inherit;
+  margin-left:auto;flex-shrink:0;background:var(--accent);color:#fff;
+  border:none;padding:7px 14px;border-radius:8px;font-size:13px;font-family:inherit;
+  letter-spacing:1px;
 }
 .toast{
   position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0));
@@ -159,18 +239,44 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
 .toast.on{opacity:1}
 
 /* ==== 干支 ==== */
-.gz-big{font-size:32px;font-weight:700;letter-spacing:5px;text-align:center;padding:6px 0 2px}
-.gz-sub{text-align:center;font-size:13px;color:var(--text-dim);letter-spacing:1px;line-height:1.8}
-
-/* ==== 语录 ==== */
-.quote{font-size:19px;line-height:1.9;letter-spacing:1.5px;padding:6px 2px}
-.quote-src{font-size:12px;color:var(--text-dim);margin:8px 0;text-align:right}
+.gz-big{font-size:36px;font-weight:700;letter-spacing:6px;text-align:center;padding:10px 0 4px;color:var(--text);text-shadow:0 1px 0 rgba(255,255,255,.25)}
+body.night .gz-big{text-shadow:0 1px 0 rgba(0,0,0,.3)}
+.gz-sub{text-align:center;font-size:13px;color:var(--text-dim);letter-spacing:1.5px;line-height:1.9;border-top:1px dashed var(--hair);margin-top:6px;padding-top:8px}
+/* 干支卡角落印章图腾 */
+.gz-seal{
+  position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:6px;
+  border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:var(--accent);font-weight:700;letter-spacing:0;
+  transform:rotate(4deg);opacity:.85;pointer-events:none;
+  background:linear-gradient(135deg, transparent 55%, rgba(166,60,46,.08) 55%);
+}
+.gz-seal::after{content:"印";font-size:9px;position:absolute;bottom:1px;right:3px;color:var(--accent);opacity:.6}
 
 /* ==== 首页摘要 ==== */
-.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.stat-box{background:rgba(128,128,128,.07);border-radius:10px;padding:10px 6px;text-align:center}
-.stat-box .num{font-size:20px;font-weight:700;color:var(--accent)}
-.stat-box .lbl{font-size:11px;color:var(--text-dim);margin-top:2px}
+.slogan{
+  color:var(--accent);letter-spacing:3px;text-align:center;
+  font-size:13px;margin:2px 0 6px;padding:4px 0;
+  position:relative;
+}
+/* slogan 上下细线 */
+.slogan::before,.slogan::after{
+  content:"";display:block;height:1px;width:56px;margin:0 auto;
+  background:linear-gradient(90deg, transparent, rgba(166,60,46,.45), transparent);
+}
+body.night .slogan::before,body.night .slogan::after{background:linear-gradient(90deg, transparent, rgba(200,85,61,.5), transparent)}
+.slogan::before{margin-bottom:6px}
+.slogan::after{margin-top:6px}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.stat-box{
+  text-align:center;padding:12px 6px;
+  position:relative;
+}
+.stat-box + .stat-box::before{
+  content:"";position:absolute;left:0;top:15%;bottom:15%;width:1px;
+  background:var(--hair);
+}
+.stat-box .num{font-size:22px;font-weight:700;color:var(--text);letter-spacing:1px}
+.stat-box .lbl{font-size:11px;color:var(--accent);margin-top:3px;letter-spacing:2px}
 
 /* ==== 农历日历 ==== */
 .cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
@@ -178,7 +284,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal-cell{
   min-height:52px;padding:5px 3px;border-radius:8px;text-align:center;cursor:pointer;
-  background:rgba(128,128,128,.07);
+  background:var(--hair-soft);
   display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;
 }
 .cal-cell .sd{font-size:14px;font-weight:600;line-height:1.3}
@@ -192,19 +298,19 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cal-nav .ym{font-size:16px;font-weight:600;letter-spacing:1px}
 .cal-nav button{
-  border:1px solid rgba(128,128,128,.3);background:transparent;color:var(--text);
+  border:1px solid var(--hair);background:transparent;color:var(--text);
   border-radius:8px;padding:7px 14px;font-size:15px;font-family:inherit;
 }
 
 /* ==== 四柱 ==== */
-.pill{display:inline-block;background:rgba(128,128,128,.1);border-radius:6px;padding:3px 8px;margin:2px 3px 2px 0;font-size:14px;letter-spacing:1px}
+.pill{display:inline-block;background:var(--hair-soft);border-radius:6px;padding:3px 8px;margin:2px 3px 2px 0;font-size:14px;letter-spacing:1px}
 .pill b{color:var(--accent)}
 
 /* ==== 密码本 ==== */
 .pwd-row{display:flex;align-items:center;gap:8px}
 .pwd-row .mono{letter-spacing:2px}
 .mini-btn{
-  border:1px solid rgba(128,128,128,.3);background:transparent;color:var(--text);
+  border:1px solid var(--hair);background:transparent;color:var(--text);
   border-radius:7px;padding:5px 10px;font-size:13px;font-family:inherit;flex-shrink:0;
 }
 
@@ -214,14 +320,14 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
 .fs14{font-size:14px}
 
 /* ==== 账户切换 ==== */
-.seg{display:flex;background:rgba(128,128,128,.08);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px}
+.seg{display:flex;background:var(--hair-soft);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px}
 .seg button{flex:1;border:none;background:transparent;color:var(--text);font-family:inherit;font-size:14px;padding:9px 0;border-radius:8px;letter-spacing:1px}
 .seg button.on{background:var(--accent);color:#fff}
 
 /* ==== 常用网址 ==== */
 .link-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .link-card{
-  background:rgba(128,128,128,.07);border-radius:12px;padding:14px 10px;text-align:center;
+  background:var(--hair-soft);border-radius:12px;padding:14px 10px;text-align:center;
   text-decoration:none;color:var(--text);display:block;
 }
 .link-card:active{opacity:.7}
@@ -245,7 +351,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
 .modal .m-text{font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:18px;word-break:break-all}
 .modal .m-actions{display:flex;gap:10px}
 .modal .m-actions button{flex:1;padding:11px 0;font-size:15px;font-family:inherit;border:none;border-radius:10px;letter-spacing:1px}
-.modal .m-no{background:rgba(128,128,128,.15);color:var(--text)}
+.modal .m-no{background:var(--hair-soft);color:var(--text)}
 .modal .m-yes{background:var(--accent);color:#fff}
 .modal .m-yes.danger{background:#d9534f}
 </style>
@@ -257,7 +363,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
   <!-- ==== 侧边栏 START ==== -->
   <aside class="side">
     <button class="brand" id="brandBtn" onclick="App.go('home')" title="方寸 · 首页">
-      <div class="logo">☯️</div>
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:26px;height:26px;display:block;margin:0 auto"><path d="M3.5 12a8.5 8.5 0 1 0 5.2-7.7"/></svg></div>
       <div class="name">方寸</div>
     </button>
     <nav class="nav" id="nav">
@@ -272,16 +378,17 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
     <!-- ==== 功能：首页 START ==== -->
     <section class="page" id="page-home">
       <div class="page-title">方寸</div>
-      <div class="page-sub" id="homeDateSub" style="margin-top:0;color:var(--accent);letter-spacing:2px">一切福田，不离方寸</div>
+      <div class="page-sub slogan" id="homeDateSub">一切福田，不离方寸</div>
 
       <div class="card">
-        <h2>📅 今日干支</h2>
+        <h2>今日干支</h2>
+        <div class="gz-seal" aria-hidden="true">方</div>
         <div class="gz-big" id="homeGzDay">—</div>
         <div class="gz-sub" id="homeGzSub">—</div>
       </div>
 
       <div class="card">
-        <h2>💬 今日语录</h2>
+        <h2>今日语录</h2>
         <div class="quote" id="quoteText">—</div>
         <div class="row">
           <button class="mini-btn" onclick="Quote.next()">换一条</button>
@@ -294,7 +401,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>📊 今日一览</h2>
+        <h2>今日一览</h2>
         <div class="stat-grid" id="homeStats"></div>
       </div>
     </section>
@@ -306,7 +413,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       <div class="page-sub" id="zhanSub"></div>
 
       <div class="card">
-        <h2>🧘 今日打卡</h2>
+        <h2>今日打卡</h2>
         <div class="zhan-day" id="zhanDayNum" style="font-size:30px;font-weight:700;color:var(--accent);letter-spacing:2px">—</div>
         <div class="hint" style="margin-top:2px;margin-bottom:12px" id="zhanStreak"></div>
         <div class="row">
@@ -321,7 +428,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>🗓 近 10 次记录</h2>
+        <h2>近 10 次记录</h2>
         <div id="zhanList"></div>
       </div>
     </section>
@@ -337,7 +444,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>📈 记一笔提交</h2>
+        <h2>记一笔提交</h2>
         <div class="row">
           <select id="alphaRegion">
             <option value="">地区…</option>
@@ -367,13 +474,13 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>📊 统计</h2>
+        <h2>统计</h2>
         <div class="stat-grid" id="alphaStats"></div>
         <p class="hint" style="margin-top:10px">记错了的条目点 ✕ 删掉。初始累计在「设置」里设。</p>
       </div>
 
       <div class="card">
-        <h2>🗓 近日历史</h2>
+        <h2>近日历史</h2>
         <div id="alphaList"></div>
       </div>
     </section>
@@ -396,7 +503,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>💡 用法</h2>
+        <h2>用法</h2>
         <p class="hint" style="margin-top:0;line-height:2">
           1. 「农历」页存好八字（含称呼和备注）<br>
           2. 想细看时点「打开排盘站」，输入同一组生辰<br>
@@ -413,7 +520,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       <div class="page-sub" id="todoSub"></div>
 
       <div class="card">
-        <h2>✅ 记一件</h2>
+        <h2>记一件</h2>
         <div class="row">
           <input type="text" id="todoInput" placeholder="要办的事，回车直接添加" onkeydown="if(event.key==='Enter')Todo.add()">
           <button class="btn" onclick="Todo.add()">添加</button>
@@ -425,7 +532,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>📋 清单</h2>
+        <h2>清单</h2>
         <div id="todoList"></div>
         <div id="todoDoneWrap"></div>
       </div>
@@ -438,12 +545,12 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       <div class="page-sub">只存在这台手机里，不上传</div>
 
       <div class="card">
-        <h2>🔍 查找</h2>
+        <h2>查找</h2>
         <input type="text" id="passSearch" placeholder="搜网站或账号……" oninput="Pass.render()">
       </div>
 
       <div class="card">
-        <h2>➕ 记一条</h2>
+        <h2>记一条</h2>
         <div class="row">
           <input type="text" id="passSite" placeholder="网站 / 应用（如：Github）">
         </div>
@@ -460,7 +567,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>🗂 全部 <span id="passCount" class="fs12" style="color:var(--text-dim);font-weight:400"></span></h2>
+        <h2>全部 <span id="passCount" class="fs12" style="color:var(--text-dim);font-weight:400"></span></h2>
         <div id="passList"></div>
       </div>
     </section>
@@ -472,7 +579,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       <div class="page-sub">江湖各处，一键即达</div>
 
       <div class="card">
-        <h2>➕ 占一处</h2>
+        <h2>占一处</h2>
         <div class="row">
           <input type="text" id="linkName" placeholder="名号（如：八字排盘站）">
         </div>
@@ -483,7 +590,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>🗺️ 江湖名录 <span id="linkCount" class="fs12" style="color:var(--text-dim);font-weight:400"></span></h2>
+        <h2>江湖名录 <span id="linkCount" class="fs12" style="color:var(--text-dim);font-weight:400"></span></h2>
         <div id="linkGrid" class="link-grid"></div>
       </div>
     </section>
@@ -495,7 +602,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       <div class="page-sub" id="lunarTodaySub"></div>
 
       <div class="card">
-        <h2>📅 今日干支</h2>
+        <h2>今日干支</h2>
         <div class="gz-big" id="lunarGzDay">—</div>
         <div class="gz-sub" id="lunarGzSub">—</div>
       </div>
@@ -512,7 +619,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>🔮 八字记录</h2>
+        <h2>八字记录</h2>
         <div class="row">
           <input type="text" id="baziName" placeholder="称呼（自己、某友…）">
         </div>
@@ -554,7 +661,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       <div class="page-title">设置</div>
 
       <div class="card">
-        <h2>🌓 外观</h2>
+        <h2>外观</h2>
         <div class="row">
           <button class="btn ghost" onclick="Theme.apply('day')">☀️ 宣纸</button>
           <button class="btn ghost" onclick="Theme.apply('night')">🌙 玄夜</button>
@@ -569,10 +676,10 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>📐 初始数据</h2>
+        <h2>初始数据</h2>
         <p class="hint" style="margin-top:0">非从零起步才需要设，一般只设一次，以后不用再动。</p>
         <div style="margin-bottom:14px">
-          <label class="fs14" style="display:block;margin-bottom:6px">🧘 站桩目前累计到第几天</label>
+          <label class="fs14" style="display:block;margin-bottom:6px">站桩目前累计到第几天</label>
           <div class="row">
             <input type="number" id="zhanBase" placeholder="如：300" min="1">
             <button class="btn ghost" onclick="Zhan.saveBase()">保存</button>
@@ -595,7 +702,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>💾 数据备份</h2>
+        <h2>数据备份</h2>
         <p class="hint" style="margin-top:0;margin-bottom:12px">
           你的所有数据都存在这台手机的浏览器里，不在任何服务器上。<br>
           换手机、清理浏览器数据前，记得先导出备份。<br>
@@ -610,7 +717,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim)}
       </div>
 
       <div class="card">
-        <h2>⚠️ 危险操作</h2>
+        <h2>危险操作</h2>
         <button class="btn danger" onclick="Store.wipe()">清空所有数据</button>
         <p class="hint">清空前请确认已经导出过备份，这个操作无法撤销。</p>
       </div>
@@ -824,15 +931,15 @@ const UI = {
    ═══════════════════════════════════════════════════════════ */
 const App = {
   routes: [
-    { id:'home',     icon:'🏠', name:'首页',  hidden:true, onShow: () => Home.render() },
-    { id:'zhan',     icon:'🧘', name:'站桩',  onShow: () => Zhan.render() },
-    { id:'alpha',    icon:'📈', name:'Alpha', onShow: () => Alpha.render() },
-    { id:'lunar',    icon:'📅', name:'农历',  onShow: () => LunarPage.render() },
-    { id:'paipan',   icon:'🔮', name:'排盘',  onShow: () => {} },
-    { id:'todo',     icon:'✅', name:'待办',  onShow: () => Todo.render() },
-    { id:'pass',     icon:'🔑', name:'密码本', onShow: () => Pass.render() },
-    { id:'links',    icon:'🗺️', name:'江湖',  onShow: () => Links.render() },
-    { id:'settings', icon:'⚙️', name:'设置',  onShow: () => Settings.render() }
+    { id:'home',     icon:'',  name:'首页',  hidden:true, onShow: () => Home.render() },
+    { id:'zhan', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.8" r="2.2"/><path d="M12 7.2v6.8M8.2 11.2l3.8 2.6 3.8-2.6M12 14V20"/></svg>', name:'站桩',  onShow: () => Zhan.render() },
+    { id:'alpha', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-6 4 3 6-8"/><path d="M16 6h4v4"/></svg>', name:'Alpha', onShow: () => Alpha.render() },
+    { id:'lunar', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5.5" width="16" height="15" rx="2"/><path d="M8 3.5v3.5M16 3.5v3.5M4 10h16"/><path d="M9.5 14.5l1.8 2.4 3-4"/></svg>', name:'农历',  onShow: () => LunarPage.render() },
+    { id:'paipan', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17"/><circle cx="12" cy="12" r="3"/></svg>', name:'排盘',  onShow: () => {} },
+    { id:'todo', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/><path d="M9 12l2 2 4-4.5"/></svg>', name:'待办',  onShow: () => Todo.render() },
+    { id:'pass', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="1.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15.5" r="1.6"/></svg>', name:'密码本', onShow: () => Pass.render() },
+    { id:'links', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l5-8 4 5 3-3.5L21 18"/><path d="M4 21h16"/><path d="M5 14.5h.01M9.2 11.5h.01M15.2 12.5h.01"/></svg>', name:'江湖',  onShow: () => Links.render() },
+    { id:'settings', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="1.5"/><path d="M12 8.5v7M8.5 12h7"/></svg>', name:'设置',  onShow: () => Settings.render() }
   ],
 
   go(id){
