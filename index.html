@@ -1037,13 +1037,15 @@ const Zhan = {
       else break;
       if (streak > 3700) break;
     }
-    return { streak, total };
+    // 累计天数 = 基数 + 记录数；未打卡时：新用户显示「第 1 天」，有基数的显示基数本身（不再 +1）
+    const base = Store.get('zhan_base', 0) || 0;
+    const today = Store.getDaily('zhan');
+    const dayNum = base + total + (today ? 0 : (base === 0 ? 1 : 0));
+    return { streak, total, dayNum };
   },
   render(){
-    const { streak, total } = this.stats();
+    const { streak, total, dayNum } = this.stats();
     const today = Store.getDaily('zhan');
-    const base = Store.get('zhan_base', 0) || 0;
-    const dayNum = base + total + (today ? 0 : 1);
     document.getElementById('zhanDayNum').textContent = today ? ('第 ' + dayNum + ' 天 · 已打卡') : ('第 ' + dayNum + ' 天');
     document.getElementById('zhanStreak').textContent = '连续 ' + streak + ' 天 · 工作台记录 ' + total + ' 天';
     document.getElementById('zhanSub').textContent = Lunar.todayGZ().day + '日 · 站的是桩，定的是心';
@@ -1958,11 +1960,11 @@ const Home = {
     Quote.render();
 
     // 今日一览（各模块提供 stats()，没启用时显示 0）
-    const zs = (typeof Zhan  !== 'undefined') ? Zhan.stats()  : {streak:0, total:0};
+    const zs = (typeof Zhan  !== 'undefined') ? Zhan.stats()  : {dayNum:0, total:0};
     const as = (typeof Alpha !== 'undefined') ? Alpha.statsFor('bing') : {today:0, week:0};
     const gs = (typeof Todo  !== 'undefined') ? Todo.nearest() : null;
     document.getElementById('homeStats').innerHTML = `
-      <div class="stat-box"><div class="num">${zs.streak}</div><div class="lbl">站桩连续天</div></div>
+      <div class="stat-box"><div class="num">${zs.dayNum}</div><div class="lbl">站桩第几天</div></div>
       <div class="stat-box"><div class="num">${as.today}</div><div class="lbl">今日 Alpha</div></div>
       <div class="stat-box"><div class="num">${gs ? gs.days : '—'}</div><div class="lbl">${gs ? '天后·' + Util.esc(gs.name) : '无倒计时'}</div></div>`;
   }
