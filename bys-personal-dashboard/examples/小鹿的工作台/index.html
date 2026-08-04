@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  小鹿的工作台                                                 ║
+  ║  由 不一书个人工作台生成器 (bys-personal-dashboard) 生成       ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║  这是一个示例工程，用户画像：做自媒体 + 在减肥的女生            ║
+  ║  风格：森系  ·  6 个功能，全部为「本地」型                     ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>小鹿的工作台</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="小鹿">
+<meta name="theme-color" content="#7d9471">
+
+<style>
+/* ==== 主题变量：森系 ==== */
+:root{
+  --bg:#eef2e6;
+  --sidebar:#7d9471;
+  --sidebar-text:#f0f4ea;
+  --sidebar-active:#a8bc9c;
+  --card:#ffffff;
+  --text:#2f3a2c;
+  --text-dim:#7a8574;
+  --accent:#4a6741;
+  --radius:18px;
+  --shadow:0 2px 12px rgba(80,100,70,.08);
+  --font:-apple-system,"PingFang SC",system-ui,sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden}
+.app{display:flex;height:100%}
+
+.side{
+  width:76px;flex-shrink:0;background:var(--sidebar);
+  display:flex;flex-direction:column;
+  padding:calc(12px + env(safe-area-inset-top,0)) 6px calc(12px + env(safe-area-inset-bottom,0));
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.side::-webkit-scrollbar{display:none}
+.brand{text-align:center;margin-bottom:14px;flex-shrink:0}
+.brand .logo{font-size:26px;line-height:1}
+.brand .name{font-size:11px;color:var(--sidebar-text);opacity:.85;margin-top:4px;line-height:1.3;word-break:break-all}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav button{border:none;background:transparent;font-family:inherit;padding:10px 2px;border-radius:12px;color:var(--sidebar-text);font-size:11px;line-height:1.3}
+.nav button .ico{display:block;font-size:21px;margin-bottom:3px}
+.nav button.on{background:var(--sidebar-active)}
+
+.main{
+  flex:1;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(14px + env(safe-area-inset-top,0)) 12px calc(28px + env(safe-area-inset-bottom,0));
+}
+.page{display:none;flex-direction:column;gap:12px}
+.page.on{display:flex}
+.page-title{font-size:22px;font-weight:600;margin-bottom:2px}
+.page-sub{font-size:13px;color:var(--text-dim);margin-top:-8px;margin-bottom:2px}
+
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+.card h2{font-size:17px;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.hint{font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5}
+.empty{font-size:13px;color:var(--text-dim);text-align:center;padding:18px 0}
+
+input,textarea,select{
+  width:100%;font-size:16px;font-family:inherit;color:var(--text);
+  padding:11px 13px;border:1px solid rgba(128,128,128,.28);
+  border-radius:calc(var(--radius) - 6px);background:transparent;
+}
+textarea{min-height:88px;resize:vertical;line-height:1.6}
+input::placeholder,textarea::placeholder{color:var(--text-dim)}
+.btn{padding:11px 18px;font-size:15px;font-family:inherit;white-space:nowrap;border:none;border-radius:calc(var(--radius) - 6px);background:var(--accent);color:#fff}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid rgba(128,128,128,.3)}
+.btn.danger{background:#d9534f}
+.btn:active{opacity:.75}
+.row{display:flex;gap:8px;align-items:center}
+.row .btn{flex-shrink:0}
+
+.item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed rgba(128,128,128,.22)}
+.item:last-child{border-bottom:none}
+.item .grow{flex:1;min-width:0;font-size:14px;line-height:1.5}
+.item .del{color:var(--text-dim);font-size:16px;background:none;border:none;padding:0 4px;flex-shrink:0}
+.item .time{font-size:13px;color:var(--text-dim);flex-shrink:0;width:42px}
+.box{width:21px;height:21px;flex-shrink:0;margin-top:1px;border:2px solid var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;background:transparent}
+.item.done .box{background:var(--accent)}
+.item.done .grow{text-decoration:line-through;color:var(--text-dim)}
+
+.banner{background:var(--accent);color:#fff;padding:11px 14px;border-radius:var(--radius);font-size:13px;line-height:1.5;display:flex;align-items:center;gap:10px}
+.banner button{margin-left:auto;flex-shrink:0;background:rgba(255,255,255,.22);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:13px;font-family:inherit}
+.toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0));transform:translateX(-50%);z-index:99;background:rgba(0,0,0,.82);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+
+/* 本示例特有 */
+.big{font-size:30px;font-weight:600;line-height:1.2}
+.unit{font-size:15px;color:var(--text-dim);font-weight:400;margin-left:4px}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.tags button{padding:7px 13px;font-size:14px;font-family:inherit;border:1px solid rgba(128,128,128,.28);border-radius:16px;background:transparent;color:var(--text)}
+.tags button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.week{display:flex;gap:5px;margin-top:12px}
+.week div{flex:1;aspect-ratio:1;border-radius:7px;background:rgba(128,128,128,.13);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim)}
+.sum{display:flex;justify-content:space-between;font-size:14px;padding:9px 0;border-bottom:1px solid rgba(128,128,128,.14)}
+.sum:last-child{border-bottom:none}
+.big-btn{width:100%;padding:26px;font-size:19px;font-family:inherit;border:none;border-radius:var(--radius);background:var(--accent);color:#fff}
+.big-btn:active{opacity:.8}
+.status{font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(128,128,128,.16);color:var(--text-dim);flex-shrink:0;margin-left:6px}
+.status.doing{background:rgba(74,103,65,.16);color:var(--accent)}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ==== 侧边栏 START ==== -->
+  <aside class="side">
+    <div class="brand">
+      <div class="logo">🦌</div>
+      <div class="name">小鹿的工作台</div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
+  <!-- ==== 侧边栏 END ==== -->
+
+  <main class="main" id="main">
+
+    <!-- ==== 功能：今日计划 START ==== -->
+    <section class="page" id="page-plan">
+      <div class="page-title">今日计划</div>
+      <div class="page-sub" id="planDate"></div>
+
+      <div class="card">
+        <h2>📋 固定行程</h2>
+        <div id="planList"></div>
+        <p class="hint">每天 0 点自动重置。想改行程表，点下面的按钮。</p>
+        <button class="btn ghost" style="margin-top:10px" onclick="Plan.toggleEdit()">编辑行程表</button>
+        <div id="planEdit" style="display:none;margin-top:12px">
+          <div class="row">
+            <input type="text" id="planTime" placeholder="09:00" style="width:88px;flex-shrink:0">
+            <input type="text" id="planText" placeholder="要做的事">
+            <button class="btn" onclick="Plan.addTemplate()">加</button>
+          </div>
+          <div id="planTemplateList" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>✏️ 今日临时待办</h2>
+        <div class="row">
+          <input type="text" id="todoInput" placeholder="临时想起来要做的事">
+          <button class="btn" onclick="Plan.addTodo()">添加</button>
+        </div>
+        <div id="todoList" style="margin-top:6px"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：今日计划 END ==== -->
+
+    <!-- ==== 功能：选题池 START ==== -->
+    <section class="page" id="page-idea">
+      <div class="page-title">选题池</div>
+      <div class="page-sub">想到什么先扔进来，别让它跑了</div>
+
+      <div class="card">
+        <h2>💡 记一个选题</h2>
+        <div class="row">
+          <input type="text" id="ideaInput" placeholder="比如：为什么我戒不掉短视频">
+          <button class="btn" onclick="Idea.add()">存</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📚 我的选题</h2>
+        <div class="tags" id="ideaFilter">
+          <button class="on" onclick="Idea.filter('all',this)">全部</button>
+          <button onclick="Idea.filter('new',this)">待写</button>
+          <button onclick="Idea.filter('doing',this)">在写</button>
+          <button onclick="Idea.filter('done',this)">已发</button>
+        </div>
+        <div id="ideaList"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：选题池 END ==== -->
+
+    <!-- ==== 功能：体重 START ==== -->
+    <section class="page" id="page-weight">
+      <div class="page-title">体重</div>
+
+      <div class="card">
+        <h2>⚖️ 今日体重</h2>
+        <div class="row">
+          <input type="number" id="weightInput" step="0.1" placeholder="今日体重 kg">
+          <button class="btn" onclick="Weight.add()">保存</button>
+        </div>
+        <div id="weightNow" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card">
+        <h2>📉 变化趋势</h2>
+        <div id="weightChart"></div>
+      </div>
+
+      <div class="card">
+        <h2>🗒 历史记录</h2>
+        <div id="weightList"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：体重 END ==== -->
+
+    <!-- ==== 功能：喝水 START ==== -->
+    <section class="page" id="page-water">
+      <div class="page-title">喝水</div>
+      <div class="page-sub">久坐的人最容易忘的一件事</div>
+
+      <div class="card" style="text-align:center">
+        <div class="big" id="waterCount">0<span class="unit">杯 / 今天</span></div>
+        <button class="big-btn" style="margin-top:16px" onclick="Water.drink()">💧 喝了一杯</button>
+        <p class="hint">目标 8 杯。点错了？<a href="javascript:Water.undo()" style="color:var(--accent)">撤销一次</a></p>
+      </div>
+
+      <div class="card">
+        <h2>📆 最近 7 天</h2>
+        <div class="week" id="waterWeek"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：喝水 END ==== -->
+
+    <!-- ==== 功能：记账 START ==== -->
+    <section class="page" id="page-money">
+      <div class="page-title">记账</div>
+
+      <div class="card">
+        <h2>💰 记一笔</h2>
+        <input type="number" id="moneyAmount" step="0.01" placeholder="金额">
+        <div class="tags" id="moneyCat"></div>
+        <div class="row">
+          <button class="btn" style="flex:1" onclick="Money.add('out')">− 支出</button>
+          <button class="btn ghost" style="flex:1" onclick="Money.add('in')">+ 收入</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📊 本月</h2>
+        <div id="moneySum"></div>
+      </div>
+
+      <div class="card">
+        <h2>🧾 流水</h2>
+        <div id="moneyList"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：记账 END ==== -->
+
+    <!-- ==== 功能：设置 START ==== -->
+    <section class="page" id="page-settings">
+      <div class="page-title">设置</div>
+
+      <div class="card">
+        <h2>💾 数据备份</h2>
+        <p class="hint" style="margin-top:0;margin-bottom:12px">
+          你的所有数据都存在这台手机的浏览器里，不在任何服务器上。<br>
+          换手机、清理浏览器数据前，记得先导出备份。
+        </p>
+        <div class="row">
+          <button class="btn" onclick="Store.exportFile()">导出备份</button>
+          <button class="btn ghost" onclick="document.getElementById('importFile').click()">恢复备份</button>
+        </div>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="Store.importFile(this)">
+        <p class="hint" id="backupInfo"></p>
+      </div>
+
+      <div class="card">
+        <h2>⚠️ 危险操作</h2>
+        <button class="btn danger" onclick="Store.wipe()">清空所有数据</button>
+        <p class="hint">清空前请确认已经导出过备份，这个操作无法撤销。</p>
+      </div>
+
+      <div class="card">
+        <p class="hint" style="margin:0;text-align:center">
+          小鹿的工作台<br>
+          <span style="opacity:.6">由 不一书个人工作台生成器 生成</span>
+        </p>
+      </div>
+    </section>
+    <!-- ==== 功能：设置 END ==== -->
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════ Store · 存储抽象层 ═══════════════ */
+const Store = (() => {
+  const NS  = 'bysdash:';
+  const SEC = 'bysdash$secret:';
+
+  const driver = {
+    get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k,v){
+      try { localStorage.setItem(k, JSON.stringify(v)); return true; }
+      catch(e){ UI.toast('存储空间满了，请到设置里导出备份后清理旧数据'); console.error(e); return false; }
+    },
+    remove(k){ localStorage.removeItem(k); },
+    keys(){ return Object.keys(localStorage); }
+  };
+
+  return {
+    get(key, fallback = null){
+      const v = driver.get(NS + key);
+      return v === null || v === undefined ? fallback : v;
+    },
+    set(key, val){
+      const ok = driver.set(NS + key, val);
+      if (ok) driver.set(NS + '_lastWrite', Date.now());
+      return ok;
+    },
+    remove(key){ driver.remove(NS + key); },
+    getDaily(key, fallback = null){ return this.get(key + ':' + Util.today(), fallback); },
+    setDaily(key, val){ return this.set(key + ':' + Util.today(), val); },
+    getSecret(key){ return driver.get(SEC + key); },
+    setSecret(key, val){ return driver.set(SEC + key, val); },
+
+    exportAll(){
+      const data = {};
+      driver.keys().filter(k => k.startsWith(NS)).forEach(k => { data[k.slice(NS.length)] = driver.get(k); });
+      return { app:'小鹿的工作台', version:1, exportedAt:new Date().toISOString(), data };
+    },
+    exportFile(){
+      const blob = new Blob([JSON.stringify(this.exportAll(), null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '小鹿备份-' + Util.today() + '.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      this.set('_lastBackup', Date.now());
+      UI.toast('已导出，建议转发到微信文件传输助手存一份');
+      Settings.refreshBackupInfo();
+    },
+    importFile(input){
+      const f = input.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = e => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!parsed.data) throw new Error('格式不对');
+          if (!confirm('恢复备份会覆盖当前所有数据，确定吗？')) return;
+          Object.entries(parsed.data).forEach(([k,v]) => driver.set(NS + k, v));
+          UI.toast('恢复成功，正在重新加载');
+          setTimeout(() => location.reload(), 900);
+        } catch(err){ UI.toast('文件读不了，可能不是备份文件'); }
+      };
+      r.readAsText(f);
+      input.value = '';
+    },
+    wipe(){
+      if (!confirm('确定清空所有数据？这个操作无法撤销。')) return;
+      if (!confirm('再确认一次：真的要清空吗？')) return;
+      driver.keys().filter(k => k.startsWith(NS)).forEach(k => driver.remove(k));
+      location.reload();
+    }
+  };
+})();
+
+/* ═══════════════ Util ═══════════════ */
+const Util = {
+  today(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  },
+  dayOffset(n){
+    const d = new Date(); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  },
+  uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); },
+  esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); },
+  compressImage(file, maxW = 800, quality = .72){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width);
+        const cv = document.createElement('canvas');
+        cv.width = img.width * scale; cv.height = img.height * scale;
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        resolve(cv.toDataURL('image/jpeg', quality));
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+};
+
+/* ═══════════════ UI ═══════════════ */
+const UI = {
+  toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('on');
+    clearTimeout(this._t);
+    this._t = setTimeout(() => t.classList.remove('on'), 2200);
+  },
+  banner(html, pageId = null){
+    const box = document.createElement('div');
+    box.className = 'banner';
+    box.innerHTML = html;
+    const target = pageId ? document.getElementById(pageId) : document.querySelector('.page.on');
+    target?.prepend(box);
+    return box;
+  }
+};
+
+/* ═══════════════ App · 路由 ═══════════════ */
+const App = {
+  routes: [
+    { id:'plan',     icon:'📅', name:'今日计划', onShow: () => Plan.render()     },
+    { id:'idea',     icon:'💡', name:'选题池',   onShow: () => Idea.render()     },
+    { id:'weight',   icon:'⚖️', name:'体重',     onShow: () => Weight.render()   },
+    { id:'water',    icon:'💧', name:'喝水',     onShow: () => Water.render()    },
+    { id:'money',    icon:'💰', name:'记账',     onShow: () => Money.render()    },
+    { id:'settings', icon:'⚙️', name:'设置',     onShow: () => Settings.render() }
+  ],
+
+  go(id){
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+    document.getElementById('page-' + id)?.classList.add('on');
+    document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.id === id));
+    document.getElementById('main').scrollTop = 0;
+    Store.set('_lastPage', id);
+    this.routes.find(r => r.id === id)?.onShow?.();
+  },
+
+  init(){
+    document.getElementById('nav').innerHTML = this.routes.map(r =>
+      `<button data-id="${r.id}" onclick="App.go('${r.id}')"><span class="ico">${r.icon}</span>${r.name}</button>`).join('');
+    const last = Store.get('_lastPage');
+    this.go(this.routes.some(r => r.id === last) ? last : this.routes[0].id);
+    this.checkBackup();
+  },
+
+  checkBackup(){
+    const last = Store.get('_lastBackup');
+    if (!Store.get('_lastWrite')) return;
+    const days = last ? (Date.now() - last) / 864e5 : 99;
+    if (days < 7) return;
+    UI.banner(`<span>${last ? '已经 ' + Math.floor(days) + ' 天没备份了' : '记得备份一下，数据只在这台手机上'}</span>
+               <button onclick="App.go('settings')">去备份</button>`);
+  }
+};
+
+/* ══════ 设置 ══════ */
+const Settings = {
+  keys: [],
+  render(){ this.refreshBackupInfo(); },
+  refreshBackupInfo(){
+    const last = Store.get('_lastBackup');
+    const el = document.getElementById('backupInfo');
+    if (el) el.textContent = last ? '上次备份：' + new Date(last).toLocaleDateString('zh-CN') : '还没备份过';
+  }
+};
+
+/* ==== 功能：今日计划 START ==== */
+const Plan = {
+  render(){
+    const d = new Date();
+    document.getElementById('planDate').textContent =
+      `${d.getMonth()+1} 月 ${d.getDate()} 日 · 星期${'日一二三四五六'[d.getDay()]}`;
+    this.renderPlan();
+    this.renderTemplate();
+    this.renderTodo();
+  },
+
+  // 行程模板是长期的，勾选状态按天存 —— 换一天自动重置
+  renderPlan(){
+    const tpl  = Store.get('plan_template', []);
+    const done = Store.getDaily('plan_done', []);
+    document.getElementById('planList').innerHTML = tpl.length
+      ? tpl.map(t => `<div class="item ${done.includes(t.id) ? 'done' : ''}" onclick="Plan.toggle('${t.id}')">
+            <span class="box">${done.includes(t.id) ? '✓' : ''}</span>
+            <span class="time">${Util.esc(t.time)}</span>
+            <span class="grow">${Util.esc(t.text)}</span>
+          </div>`).join('')
+      : '<div class="empty">还没有固定行程，点下面「编辑行程表」加几条</div>';
+  },
+
+  toggle(id){
+    const done = Store.getDaily('plan_done', []);
+    const i = done.indexOf(id);
+    i > -1 ? done.splice(i,1) : done.push(id);
+    Store.setDaily('plan_done', done);
+    this.renderPlan();
+  },
+
+  toggleEdit(){
+    const el = document.getElementById('planEdit');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  },
+
+  addTemplate(){
+    const time = document.getElementById('planTime').value.trim();
+    const text = document.getElementById('planText').value.trim();
+    if (!text) return UI.toast('写点内容吧');
+    const tpl = Store.get('plan_template', []);
+    tpl.push({ id: Util.uid(), time: time || '—', text });
+    tpl.sort((a,b) => a.time.localeCompare(b.time));
+    Store.set('plan_template', tpl);
+    document.getElementById('planTime').value = '';
+    document.getElementById('planText').value = '';
+    this.renderPlan(); this.renderTemplate();
+  },
+
+  renderTemplate(){
+    const tpl = Store.get('plan_template', []);
+    document.getElementById('planTemplateList').innerHTML = tpl.map(t =>
+      `<div class="item"><span class="time">${Util.esc(t.time)}</span>
+         <span class="grow">${Util.esc(t.text)}</span>
+         <button class="del" onclick="Plan.delTemplate('${t.id}')">✕</button></div>`).join('');
+  },
+
+  delTemplate(id){
+    Store.set('plan_template', Store.get('plan_template', []).filter(t => t.id !== id));
+    this.renderPlan(); this.renderTemplate();
+  },
+
+  addTodo(){
+    const el = document.getElementById('todoInput');
+    const text = el.value.trim();
+    if (!text) return;
+    const list = Store.getDaily('todo', []);
+    list.push({ id: Util.uid(), text, done: false });
+    Store.setDaily('todo', list);
+    el.value = '';
+    this.renderTodo();
+  },
+
+  renderTodo(){
+    const list = Store.getDaily('todo', []);
+    document.getElementById('todoList').innerHTML = list.length
+      ? list.map(t => `<div class="item ${t.done ? 'done' : ''}">
+            <span class="box" onclick="Plan.toggleTodo('${t.id}')">${t.done ? '✓' : ''}</span>
+            <span class="grow" onclick="Plan.toggleTodo('${t.id}')">${Util.esc(t.text)}</span>
+            <button class="del" onclick="Plan.delTodo('${t.id}')">✕</button>
+          </div>`).join('')
+      : '<div class="empty">今天还没有临时待办</div>';
+  },
+
+  toggleTodo(id){
+    const list = Store.getDaily('todo', []);
+    const t = list.find(x => x.id === id);
+    if (t) t.done = !t.done;
+    Store.setDaily('todo', list);
+    this.renderTodo();
+  },
+
+  delTodo(id){
+    Store.setDaily('todo', Store.getDaily('todo', []).filter(x => x.id !== id));
+    this.renderTodo();
+  }
+};
+/* ==== 功能：今日计划 END ==== */
+
+/* ==== 功能：选题池 START ==== */
+const Idea = {
+  cur: 'all',
+  LABEL: { new:'待写', doing:'在写', done:'已发' },
+
+  add(){
+    const el = document.getElementById('ideaInput');
+    const text = el.value.trim();
+    if (!text) return;
+    const list = Store.get('idea', []);
+    list.unshift({ id: Util.uid(), text, status:'new', date: Util.today() });
+    Store.set('idea', list);
+    el.value = '';
+    this.render();
+    UI.toast('存好了');
+  },
+
+  filter(s, btn){
+    this.cur = s;
+    document.querySelectorAll('#ideaFilter button').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    this.render();
+  },
+
+  // 点一下在 待写→在写→已发 之间循环，比做下拉菜单顺手
+  cycle(id){
+    const list = Store.get('idea', []);
+    const it = list.find(x => x.id === id);
+    if (it) it.status = { new:'doing', doing:'done', done:'new' }[it.status];
+    Store.set('idea', list);
+    this.render();
+  },
+
+  del(id){
+    Store.set('idea', Store.get('idea', []).filter(x => x.id !== id));
+    this.render();
+  },
+
+  render(){
+    const all = Store.get('idea', []);
+    const list = this.cur === 'all' ? all : all.filter(x => x.status === this.cur);
+    document.getElementById('ideaList').innerHTML = list.length
+      ? list.map(x => `<div class="item">
+            <span class="grow" onclick="Idea.cycle('${x.id}')">${Util.esc(x.text)}
+              <span class="status ${x.status === 'doing' ? 'doing' : ''}">${this.LABEL[x.status]}</span>
+            </span>
+            <button class="del" onclick="Idea.del('${x.id}')">✕</button>
+          </div>`).join('')
+      : '<div class="empty">' + (this.cur === 'all' ? '还没有选题，想到什么就存进来' : '这个分类下还没有') + '</div>';
+  }
+};
+/* ==== 功能：选题池 END ==== */
+
+/* ==== 功能：体重 START ==== */
+const Weight = {
+  add(){
+    const el = document.getElementById('weightInput');
+    const v = parseFloat(el.value);
+    if (!v || v < 20 || v > 300) return UI.toast('输入一个合理的体重');
+    const list = Store.get('weight', []).filter(x => x.date !== Util.today());
+    list.push({ date: Util.today(), value: v });
+    list.sort((a,b) => a.date.localeCompare(b.date));
+    Store.set('weight', list);
+    el.value = '';
+    this.render();
+    UI.toast('记好了');
+  },
+
+  del(date){
+    Store.set('weight', Store.get('weight', []).filter(x => x.date !== date));
+    this.render();
+  },
+
+  render(){
+    const list = Store.get('weight', []);
+    const now = document.getElementById('weightNow');
+
+    if (!list.length){
+      now.innerHTML = '<div class="empty">还没有记录</div>';
+      document.getElementById('weightChart').innerHTML = '<div class="empty">记满两天就有曲线了</div>';
+      document.getElementById('weightList').innerHTML = '<div class="empty">还没有记录</div>';
+      return;
+    }
+
+    const last = list[list.length - 1];
+    const first = list[0];
+    const diff = (last.value - first.value).toFixed(1);
+    now.innerHTML = `<div class="big">${last.value}<span class="unit">kg</span></div>
+      <p class="hint" style="margin-top:4px">${last.date}${
+        list.length > 1 ? ` · 相比第一次记录 ${diff > 0 ? '+' : ''}${diff} kg` : ''}</p>`;
+
+    this.chart(list);
+
+    document.getElementById('weightList').innerHTML = [...list].reverse().slice(0, 30).map(x =>
+      `<div class="item"><span class="grow">${x.date}</span>
+         <span style="font-size:15px">${x.value} kg</span>
+         <button class="del" onclick="Weight.del('${x.date}')">✕</button></div>`).join('');
+  },
+
+  // 简单折线用 SVG 手画，不引图表库 —— 国内加载外部 CDN 会明显变慢
+  chart(list){
+    const box = document.getElementById('weightChart');
+    if (list.length < 2){ box.innerHTML = '<div class="empty">记满两天就有曲线了</div>'; return; }
+    const data = list.slice(-30);
+    const vals = data.map(x => x.value);
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const span = (max - min) || 1;
+    const W = 300, H = 110, P = 10;
+    const pts = data.map((x,i) =>
+      `${P + i / (data.length - 1) * (W - P*2)},${H - P - (x.value - min) / span * (H - P*2)}`).join(' ');
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible">
+        <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"
+                  stroke-linejoin="round" stroke-linecap="round"/>
+        ${data.map((x,i) => {
+          const cx = P + i / (data.length - 1) * (W - P*2);
+          const cy = H - P - (x.value - min) / span * (H - P*2);
+          return `<circle cx="${cx}" cy="${cy}" r="2.5" fill="var(--accent)"/>`;
+        }).join('')}
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);margin-top:6px">
+        <span>${data[0].date.slice(5)}</span>
+        <span>最低 ${min} · 最高 ${max}</span>
+        <span>${data[data.length-1].date.slice(5)}</span>
+      </div>`;
+  }
+};
+/* ==== 功能：体重 END ==== */
+
+/* ==== 功能：喝水 START ==== */
+const Water = {
+  GOAL: 8,
+
+  drink(){
+    const n = Store.getDaily('water', 0) + 1;
+    Store.setDaily('water', n);
+    this.render();
+    if (n === this.GOAL) UI.toast('今天的 8 杯完成了 🎉');
+  },
+
+  undo(){
+    const n = Math.max(0, Store.getDaily('water', 0) - 1);
+    Store.setDaily('water', n);
+    this.render();
+  },
+
+  render(){
+    const n = Store.getDaily('water', 0);
+    document.getElementById('waterCount').innerHTML =
+      `${n}<span class="unit">杯 / 今天${n >= this.GOAL ? ' ✅' : '，目标 ' + this.GOAL}</span>`;
+    document.getElementById('waterWeek').innerHTML = [...Array(7)].map((_,i) => {
+      const date = Util.dayOffset(i - 6);
+      const c = Store.get('water:' + date, 0);
+      const pct = Math.min(1, c / this.GOAL);
+      return `<div style="background:rgba(74,103,65,${(pct * .75).toFixed(2)});
+                          color:${pct > .5 ? '#fff' : 'var(--text-dim)'}"
+                   title="${date}">${c}</div>`;
+    }).join('');
+  }
+};
+/* ==== 功能：喝水 END ==== */
+
+/* ==== 功能：记账 START ==== */
+const Money = {
+  // 分类是访谈时问出来的，不要用通用的「餐饮/交通/购物」
+  CATS: ['吃饭','咖啡','打车','拍摄','买菜','其他'],
+  cur: '吃饭',
+
+  render(){
+    document.getElementById('moneyCat').innerHTML = this.CATS.map(c =>
+      `<button class="${c === this.cur ? 'on' : ''}" onclick="Money.pick('${c}',this)">${c}</button>`).join('');
+    this.renderSum();
+    this.renderList();
+  },
+
+  pick(c, btn){
+    this.cur = c;
+    document.querySelectorAll('#moneyCat button').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+  },
+
+  add(type){
+    const el = document.getElementById('moneyAmount');
+    const amount = parseFloat(el.value);
+    if (!amount || amount <= 0) return UI.toast('填一个金额');
+    const list = Store.get('money', []);
+    list.unshift({ id: Util.uid(), date: Util.today(), amount, type, category: this.cur });
+    Store.set('money', list);
+    el.value = '';
+    this.render();
+    UI.toast('记好了');
+  },
+
+  del(id){
+    Store.set('money', Store.get('money', []).filter(x => x.id !== id));
+    this.render();
+  },
+
+  renderSum(){
+    const month = Util.today().slice(0, 7);
+    const list = Store.get('money', []).filter(x => x.date.startsWith(month));
+    const out = list.filter(x => x.type === 'out').reduce((s,x) => s + x.amount, 0);
+    const inc = list.filter(x => x.type === 'in').reduce((s,x) => s + x.amount, 0);
+
+    const byCat = {};
+    list.filter(x => x.type === 'out').forEach(x => { byCat[x.category] = (byCat[x.category] || 0) + x.amount; });
+    const top = Object.entries(byCat).sort((a,b) => b[1] - a[1]).slice(0, 3);
+
+    document.getElementById('moneySum').innerHTML = `
+      <div class="sum"><span>支出</span><span style="color:#c0392b">−${out.toFixed(2)}</span></div>
+      <div class="sum"><span>收入</span><span style="color:var(--accent)">+${inc.toFixed(2)}</span></div>
+      <div class="sum"><span>结余</span><span>${(inc - out).toFixed(2)}</span></div>
+      ${top.length ? '<p class="hint">花得最多：' +
+        top.map(([c,v]) => `${Util.esc(c)} ${v.toFixed(0)}`).join(' · ') + '</p>' : ''}`;
+  },
+
+  renderList(){
+    const list = Store.get('money', []).slice(0, 40);
+    document.getElementById('moneyList').innerHTML = list.length
+      ? list.map(x => `<div class="item">
+            <span class="grow">${Util.esc(x.category)}
+              <span style="color:var(--text-dim);font-size:12px"> ${x.date.slice(5)}</span></span>
+            <span style="font-size:15px;color:${x.type === 'out' ? '#c0392b' : 'var(--accent)'}">
+              ${x.type === 'out' ? '−' : '+'}${x.amount.toFixed(2)}</span>
+            <button class="del" onclick="Money.del('${x.id}')">✕</button>
+          </div>`).join('')
+      : '<div class="empty">还没有记账</div>';
+  }
+};
+/* ==== 功能：记账 END ==== */
+
+App.init();
+</script>
+</body>
+</html>

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  {{工作台名}}                                                 ║
+  ║  由 不一书个人工作台生成器 (bys-personal-dashboard) 生成       ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║  改这个文件时请遵守：                                          ║
+  ║  1. 每个功能必须被分区标记包裹，且 START 和 END 的功能名        ║
+  ║     必须一字不差（HTML 和 JS 两处都要）                        ║
+  ║  2. 数据读写只走 Store.*，不要直接碰 localStorage             ║
+  ║  3. 输入框 font-size 不能小于 16px                            ║
+  ║  4. 敏感数据（API key）走 Store.setSecret，不进备份            ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>{{工作台名}}</title>
+
+<!-- PWA：这四行决定了"添加到主屏幕"之后是不是全屏、图标好不好看 -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="{{短名称}}">
+<meta name="theme-color" content="{{sidebar色值}}">
+
+<style>
+/* ==== 主题变量（第 4 步选定的风格包原样填这里，以后换肤只改这一段） ==== */
+:root{
+  --bg:{{bg}};
+  --sidebar:{{sidebar}};
+  --sidebar-text:{{sidebar-text}};
+  --sidebar-active:{{sidebar-active}};
+  --card:{{card}};
+  --text:{{text}};
+  --text-dim:{{text-dim}};
+  --accent:{{accent}};
+  --radius:{{radius}};
+  --shadow:{{shadow}};
+  --font:{{font}};
+}
+
+/* ==== 基础 ==== */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--font); background:var(--bg); color:var(--text);
+  overflow:hidden; /* 整页不滚，只让内容区滚 —— 避免 iOS 橡皮筋把侧边栏拽走 */
+}
+.app{display:flex;height:100%}
+
+/* ==== 侧边栏：常驻窄条 ==== */
+.side{
+  width:76px;flex-shrink:0;background:var(--sidebar);
+  display:flex;flex-direction:column;
+  padding:calc(12px + env(safe-area-inset-top,0)) 6px calc(12px + env(safe-area-inset-bottom,0));
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.side::-webkit-scrollbar{display:none}
+.brand{text-align:center;margin-bottom:14px;flex-shrink:0}
+.brand .logo{font-size:26px;line-height:1}
+.brand .name{font-size:11px;color:var(--sidebar-text);opacity:.85;margin-top:4px;line-height:1.3;word-break:break-all}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav button{
+  border:none;background:transparent;font-family:inherit;
+  padding:10px 2px;border-radius:12px;
+  color:var(--sidebar-text);font-size:11px;line-height:1.3;
+}
+.nav button .ico{display:block;font-size:21px;margin-bottom:3px}
+.nav button.on{background:var(--sidebar-active)}
+
+/* ==== 内容区 ==== */
+.main{
+  flex:1;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(14px + env(safe-area-inset-top,0)) 12px calc(28px + env(safe-area-inset-bottom,0));
+}
+.page{display:none;flex-direction:column;gap:12px}
+.page.on{display:flex}
+.page-title{font-size:22px;font-weight:600;margin-bottom:2px}
+.page-sub{font-size:13px;color:var(--text-dim);margin-top:-8px;margin-bottom:2px}
+
+/* ==== 卡片 ==== */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+.card h2{font-size:17px;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.hint{font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5}
+.empty{font-size:13px;color:var(--text-dim);text-align:center;padding:18px 0}
+
+/* ==== 表单：字号必须 >=16px，否则 iOS 会自动放大整页 ==== */
+input,textarea,select{
+  width:100%;font-size:16px;font-family:inherit;color:var(--text);
+  padding:11px 13px;border:1px solid rgba(128,128,128,.28);
+  border-radius:calc(var(--radius) - 6px);background:transparent;
+}
+textarea{min-height:88px;resize:vertical;line-height:1.6}
+input::placeholder,textarea::placeholder{color:var(--text-dim)}
+.btn{
+  padding:11px 18px;font-size:15px;font-family:inherit;white-space:nowrap;
+  border:none;border-radius:calc(var(--radius) - 6px);
+  background:var(--accent);color:#fff;
+}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid rgba(128,128,128,.3)}
+.btn.danger{background:#d9534f}
+.btn:active{opacity:.75}
+.row{display:flex;gap:8px;align-items:center}
+.row .btn{flex-shrink:0}
+
+/* ==== 列表 ==== */
+.item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed rgba(128,128,128,.22)}
+.item:last-child{border-bottom:none}
+.item .grow{flex:1;min-width:0}
+.item .del{color:var(--text-dim);font-size:16px;background:none;border:none;padding:0 4px;flex-shrink:0}
+.box{
+  width:21px;height:21px;flex-shrink:0;margin-top:1px;
+  border:2px solid var(--accent);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:#fff;background:transparent;
+}
+.item.done .box{background:var(--accent)}
+.item.done .grow{text-decoration:line-through;color:var(--text-dim)}
+
+/* ==== 提示条 ==== */
+.banner{
+  background:var(--accent);color:#fff;padding:11px 14px;
+  border-radius:var(--radius);font-size:13px;line-height:1.5;
+  display:flex;align-items:center;gap:10px;
+}
+.banner button{
+  margin-left:auto;flex-shrink:0;background:rgba(255,255,255,.22);color:#fff;
+  border:none;padding:6px 12px;border-radius:8px;font-size:13px;font-family:inherit;
+}
+.toast{
+  position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0));
+  transform:translateX(-50%);z-index:99;
+  background:rgba(0,0,0,.82);color:#fff;padding:10px 18px;border-radius:20px;
+  font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ==== 侧边栏 START ==== -->
+  <aside class="side">
+    <div class="brand">
+      <div class="logo">{{品牌emoji}}</div>
+      <div class="name">{{工作台名}}</div>
+    </div>
+    <nav class="nav" id="nav">
+      <!-- 由 App.routes 自动渲染 -->
+    </nav>
+  </aside>
+  <!-- ==== 侧边栏 END ==== -->
+
+  <main class="main" id="main">
+
+    <!-- 生成正式工程时，把「示例」这一整个分区删掉，换成用户真实的功能 -->
+    <!-- ==== 功能：示例 START ==== -->
+    <section class="page" id="page-demo">
+      <div class="page-title">示例功能</div>
+      <div class="page-sub">生成正式工程时删掉这一整段</div>
+      <div class="card">
+        <h2>📝 示例</h2>
+        <div class="row">
+          <input type="text" id="demoInput" placeholder="随便写点什么">
+          <button class="btn" onclick="Demo.add()">添加</button>
+        </div>
+        <div id="demoList"></div>
+      </div>
+    </section>
+    <!-- ==== 功能：示例 END ==== -->
+
+    <!-- 设置页是必备的，不要删 -->
+    <!-- ==== 功能：设置 START ==== -->
+    <section class="page" id="page-settings">
+      <div class="page-title">设置</div>
+
+      <div class="card">
+        <h2>💾 数据备份</h2>
+        <p class="hint" style="margin-top:0;margin-bottom:12px">
+          你的所有数据都存在这台手机的浏览器里，不在任何服务器上。<br>
+          换手机、清理浏览器数据前，记得先导出备份。
+        </p>
+        <div class="row">
+          <button class="btn" onclick="Store.exportFile()">导出备份</button>
+          <button class="btn ghost" onclick="document.getElementById('importFile').click()">恢复备份</button>
+        </div>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="Store.importFile(this)">
+        <p class="hint" id="backupInfo"></p>
+      </div>
+
+      <!-- 有联网功能时保留这张卡，没有就删掉 -->
+      <div class="card" id="apiCard">
+        <h2>🔑 接口配置</h2>
+        <p class="hint" style="margin-top:0;margin-bottom:12px">
+          填在这里的 key 只保存在你自己的手机上，不会上传，也<b>不会被导出到备份文件里</b>。
+        </p>
+        <!-- {{每个联网功能一组：label + input + 说明}} -->
+        <div style="margin-bottom:12px">
+          <label style="font-size:14px;display:block;margin-bottom:6px">{{接口名}}</label>
+          <input type="password" id="key_{{接口标识}}" placeholder="粘贴你的 key">
+          <p class="hint">{{去哪申请，一句话}}</p>
+        </div>
+        <button class="btn" onclick="Settings.saveKeys()">保存</button>
+      </div>
+
+      <div class="card">
+        <h2>⚠️ 危险操作</h2>
+        <button class="btn danger" onclick="Store.wipe()">清空所有数据</button>
+        <p class="hint">清空前请确认已经导出过备份，这个操作无法撤销。</p>
+      </div>
+
+      <div class="card">
+        <p class="hint" style="margin:0;text-align:center">
+          {{工作台名}}<br>
+          <span style="opacity:.6">由 不一书个人工作台生成器 生成</span>
+        </p>
+      </div>
+    </section>
+    <!-- ==== 功能：设置 END ==== -->
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   Store · 存储抽象层
+   所有数据读写都必须走这里，不要直接用 localStorage。
+   这样以后想换成云端同步，只需要改 driver，功能代码一行不动。
+   ═══════════════════════════════════════════════════════════ */
+const Store = (() => {
+  const NS  = 'bysdash:';           // 普通数据，会进备份
+  const SEC = 'bysdash$secret:';    // 敏感数据（API key），不进备份
+
+  const driver = {
+    get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k,v){
+      try { localStorage.setItem(k, JSON.stringify(v)); return true; }
+      catch(e){
+        // 配额超了几乎总是因为存了没压缩的图片
+        UI.toast('存储空间满了，请到设置里导出备份后清理旧数据');
+        console.error(e); return false;
+      }
+    },
+    remove(k){ localStorage.removeItem(k); },
+    keys(){ return Object.keys(localStorage); }
+  };
+
+  return {
+    get(key, fallback = null){
+      const v = driver.get(NS + key);
+      return v === null || v === undefined ? fallback : v;
+    },
+    set(key, val){
+      const ok = driver.set(NS + key, val);
+      if (ok) driver.set(NS + '_lastWrite', Date.now());
+      return ok;
+    },
+    remove(key){ driver.remove(NS + key); },
+
+    // 按天存取：自动带上今天的日期，功能代码不用自己拼 key
+    getDaily(key, fallback = null){ return this.get(key + ':' + Util.today(), fallback); },
+    setDaily(key, val){ return this.set(key + ':' + Util.today(), val); },
+
+    // 敏感数据：单独命名空间，导出时排除
+    getSecret(key){ return driver.get(SEC + key); },
+    setSecret(key, val){ return driver.set(SEC + key, val); },
+
+    exportAll(){
+      const data = {};
+      driver.keys().filter(k => k.startsWith(NS)).forEach(k => {
+        data[k.slice(NS.length)] = driver.get(k);
+      });
+      return { app:'{{工作台名}}', version:1, exportedAt:new Date().toISOString(), data };
+    },
+
+    exportFile(){
+      const blob = new Blob([JSON.stringify(this.exportAll(), null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '{{短名称}}备份-' + Util.today() + '.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      this.set('_lastBackup', Date.now());
+      UI.toast('已导出，建议转发到微信文件传输助手存一份');
+      Settings.refreshBackupInfo();
+    },
+
+    importFile(input){
+      const f = input.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = e => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!parsed.data) throw new Error('格式不对');
+          if (!confirm('恢复备份会覆盖当前所有数据，确定吗？')) return;
+          Object.entries(parsed.data).forEach(([k,v]) => driver.set(NS + k, v));
+          UI.toast('恢复成功，正在重新加载');
+          setTimeout(() => location.reload(), 900);
+        } catch(err){
+          UI.toast('文件读不了，可能不是备份文件');
+        }
+      };
+      r.readAsText(f);
+      input.value = '';
+    },
+
+    wipe(){
+      if (!confirm('确定清空所有数据？这个操作无法撤销。')) return;
+      if (!confirm('再确认一次：真的要清空吗？')) return;
+      driver.keys().filter(k => k.startsWith(NS)).forEach(k => driver.remove(k));
+      location.reload();
+    }
+  };
+})();
+
+
+/* ═══════════════════════════════════════════════════════════
+   Util · 工具
+   ═══════════════════════════════════════════════════════════ */
+const Util = {
+  today(){
+    const d = new Date();
+    return d.getFullYear() + '-' +
+           String(d.getMonth()+1).padStart(2,'0') + '-' +
+           String(d.getDate()).padStart(2,'0');
+  },
+  uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); },
+  esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); },
+
+  // 图片必须压缩后再存，否则几张手机原图就撑爆 localStorage
+  compressImage(file, maxW = 800, quality = .72){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width);
+        const cv = document.createElement('canvas');
+        cv.width  = img.width  * scale;
+        cv.height = img.height * scale;
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        resolve(cv.toDataURL('image/jpeg', quality));
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   UI · 界面工具
+   ═══════════════════════════════════════════════════════════ */
+const UI = {
+  toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(this._t);
+    this._t = setTimeout(() => t.classList.remove('on'), 2200);
+  },
+  banner(html, pageId = null){
+    const box = document.createElement('div');
+    box.className = 'banner';
+    box.innerHTML = html;
+    const target = pageId ? document.getElementById(pageId) : document.querySelector('.page.on');
+    target?.prepend(box);
+    return box;
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   App · 路由与启动
+   每加一个功能，在 routes 里加一条，侧边栏自动就有了。
+   ═══════════════════════════════════════════════════════════ */
+const App = {
+  // {{生成时替换成用户的功能清单}}
+  routes: [
+    { id:'demo',     icon:'📝', name:'示例',  onShow: () => Demo.render() },
+    { id:'settings', icon:'⚙️', name:'设置',  onShow: () => Settings.render() }
+  ],
+
+  go(id){
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+    document.getElementById('page-' + id)?.classList.add('on');
+    document.querySelectorAll('#nav button').forEach(b =>
+      b.classList.toggle('on', b.dataset.id === id));
+    document.getElementById('main').scrollTop = 0;
+    Store.set('_lastPage', id);
+    this.routes.find(r => r.id === id)?.onShow?.();
+  },
+
+  init(){
+    // 渲染侧边栏
+    document.getElementById('nav').innerHTML = this.routes.map(r =>
+      `<button data-id="${r.id}" onclick="App.go('${r.id}')">
+         <span class="ico">${r.icon}</span>${r.name}
+       </button>`).join('');
+
+    // 回到上次看的那一页
+    const last = Store.get('_lastPage');
+    this.go(this.routes.some(r => r.id === last) ? last : this.routes[0].id);
+
+    this.checkBackup();
+  },
+
+  // 用户永远不会主动点导出，所以要主动提醒
+  checkBackup(){
+    const last = Store.get('_lastBackup');
+    const write = Store.get('_lastWrite');
+    if (!write) return;                                  // 还没存过东西，不用提醒
+    const days = last ? (Date.now() - last) / 864e5 : 99;
+    if (days < 7) return;
+    const b = UI.banner(
+      `<span>${last ? '已经 ' + Math.floor(days) + ' 天没备份了' : '记得备份一下，数据只在这台手机上'}</span>
+       <button onclick="App.go('settings')">去备份</button>`);
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   Settings · 设置页
+   ═══════════════════════════════════════════════════════════ */
+const Settings = {
+  // {{有联网功能时，把 key 的标识列在这里；没有就留空数组，并删掉 HTML 里的 apiCard}}
+  keys: [/* '{{接口标识}}' */],
+
+  render(){
+    this.refreshBackupInfo();
+    this.keys.forEach(k => {
+      const el = document.getElementById('key_' + k);
+      if (el) el.value = Store.getSecret(k) || '';
+    });
+    if (!this.keys.length) document.getElementById('apiCard')?.remove();
+  },
+
+  saveKeys(){
+    this.keys.forEach(k => {
+      const el = document.getElementById('key_' + k);
+      if (el) Store.setSecret(k, el.value.trim());
+    });
+    UI.toast('已保存');
+  },
+
+  refreshBackupInfo(){
+    const last = Store.get('_lastBackup');
+    const el = document.getElementById('backupInfo');
+    if (el) el.textContent = last
+      ? '上次备份：' + new Date(last).toLocaleDateString('zh-CN')
+      : '还没备份过';
+  }
+};
+
+
+/* 生成正式工程时删掉整个「示例」分区 */
+/* ==== 功能：示例 START ==== */
+const Demo = {
+  render(){
+    const list = Store.get('demo', []);
+    document.getElementById('demoList').innerHTML = list.length
+      ? list.map(x => `<div class="item">
+            <span class="grow">${Util.esc(x.text)}</span>
+            <button class="del" onclick="Demo.del('${x.id}')">✕</button>
+          </div>`).join('')
+      : '<div class="empty">还没有内容</div>';
+  },
+  add(){
+    const el = document.getElementById('demoInput');
+    const text = el.value.trim();
+    if (!text) return;
+    const list = Store.get('demo', []);
+    list.unshift({ id: Util.uid(), text });
+    Store.set('demo', list);
+    el.value = '';
+    this.render();
+  },
+  del(id){
+    Store.set('demo', Store.get('demo', []).filter(x => x.id !== id));
+    this.render();
+  }
+};
+/* ==== 功能：示例 END ==== */
+
+
+App.init();
+</script>
+</body>
+</html>

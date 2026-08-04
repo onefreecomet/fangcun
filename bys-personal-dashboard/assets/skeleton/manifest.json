@@ -1,0 +1,19 @@
+{
+  "name": "{{工作台名}}",
+  "short_name": "{{短名称}}",
+  "description": "{{一句话描述}}",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "{{bg色值}}",
+  "theme_color": "{{sidebar色值}}",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

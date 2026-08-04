@@ -1,0 +1,19 @@
+{
+  "name": "小鹿的工作台",
+  "short_name": "小鹿",
+  "description": "自媒体选题、体重、喝水、记账，一个页面全搞定",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2e6",
+  "theme_color": "#7d9471",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
