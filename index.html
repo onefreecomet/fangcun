@@ -1128,8 +1128,12 @@ const Zhan = {
     if (isNaN(v) || v < 1){ UI.toast('填个数字（至少 1）'); return; }
     const total = this.dates().length;
     const today = Store.getDaily('zhan');
-    // 把「目前累计第 X 天」换算成基准：base = X - 已记录天数 - (今天没记则 1)
-    const base = v - total - (today ? 0 : 1);
+    // 把「目前累计第 X 天」换算成基准，使显示值正好 = v（对齐 stats() 口径）：
+    // dayNum = base + total + (today ? 0 : (base===0 ? 1 : 0))
+    // → today:  base = v - total
+    //   !today: v === total+1 → base = 0（新用户第 1 天）；否则 base = v - total
+    let base = v - total;
+    if (!today && v === total + 1) base = 0;
     Store.set('zhan_base', Math.max(0, base));
     UI.toast('已按累计第 ' + v + ' 天起算');
     this.render();
@@ -1143,9 +1147,8 @@ const Zhan = {
     this.render();
   },
   dayNumNow(){
-    const total = this.dates().length;
-    const today = Store.getDaily('zhan');
-    return (Store.get('zhan_base', 0) || 0) + total + (today ? 0 : 1);
+    // 与 stats() 完全同口径，避免设置页回显与首页/站桩页不一致
+    return this.stats().dayNum;
   }
 };
 /* ==== 功能：站桩 END ==== */
