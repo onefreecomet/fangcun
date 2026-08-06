@@ -1110,11 +1110,44 @@ const Zhan = {
     const disp = document.getElementById('zhanTimerDisp');
     const st = document.getElementById('zhanTimerStatus');
     if (disp) disp.textContent = this.timerFmt(this.timerElapsed);
-    if (st) st.textContent = this.timerRunning ? '站桩中…' : (this.timerElapsed > 0 ? '已暂停 · ' + this.timerFmt(this.timerElapsed) : '未开始');
+    if (st) st.textContent = this.timerRunning
+      ? '站桩中 · 锁屏可后台计时'
+      : (this.timerElapsed > 0 ? '已暂停 · ' + this.timerFmt(this.timerElapsed) : '未开始');
+  },
+  // 后台音频保活：iOS 锁屏后页面默认挂起，用一段人耳听不见的极低振幅循环音
+  // 让系统认为有活跃音频会话 → 页面不挂起，计时与磬声照常。仅 iOS 需要，其他平台无害。
+  _bgStart(){
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!this._ac) this._ac = new AC();
+      const ctx = this._ac;
+      if (ctx.state === 'suspended') ctx.resume();
+      if (this._bgSrc) return; // 已启动
+      // 1 秒 1Hz 正弦，振幅 0.0008，再经 0.6 增益 ≈ 人耳不可闻
+      const len = ctx.sampleRate;
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.sin(2 * Math.PI * 1 * i / len) * 0.0008;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const g = ctx.createGain();
+      g.gain.value = 0.6;
+      src.connect(g).connect(ctx.destination);
+      src.start();
+      this._bgSrc = src;
+    } catch(e){ /* 降级：无音频时计时仍正常，只是锁屏会被挂起 */ }
+  },
+  _bgStop(){
+    try {
+      if (this._bgSrc){ this._bgSrc.stop(); this._bgSrc.disconnect(); this._bgSrc = null; }
+    } catch(e){}
   },
   timerStart(){
     if (this.timerRunning) return;
     this.timerRunning = true;
+    this._bgStart(); // 必须在用户手势内创建 AudioContext
     this.timerTickId = setInterval(() => {
       this.timerElapsed++;
       // 每满 10 分钟（600s）轻柔提醒一次
@@ -1134,10 +1167,8 @@ const Zhan = {
   // 轻柔磬声提醒：五声音阶双音（宫-角），正弦波 + 长衰减，音量压低
   timerChime(){
     try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      if (!this._ac) this._ac = new AC();
       const ctx = this._ac;
+      if (!ctx) return;
       if (ctx.state === 'suspended') ctx.resume();
       const t0 = ctx.currentTime;
       // 宫(523.25=C5) → 角(659.25=E5)，相隔 0.45s，像远处磬声
@@ -1160,6 +1191,7 @@ const Zhan = {
     if (!this.timerRunning) return;
     this.timerRunning = false;
     clearInterval(this.timerTickId);
+    // 暂停时保持后台音频保活（页面不挂起），恢复计时时无需重新解锁音频
     document.getElementById('zhanTimerStart').disabled = false;
     document.getElementById('zhanTimerStart').classList.add('go');
     document.getElementById('zhanTimerPause').textContent = '⏸ 已暂停';
@@ -1168,6 +1200,7 @@ const Zhan = {
   timerEnd(){
     clearInterval(this.timerTickId);
     this.timerRunning = false;
+    this._bgStop(); // 停止后台保活音频
     const totalSec = this.timerElapsed;
     // 结束：按分钟填入时长框（不足 30 秒按 1 分钟，其余四舍五入）
     const mins = totalSec < 30 ? 1 : Math.round(totalSec / 60);
