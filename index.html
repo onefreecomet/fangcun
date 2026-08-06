@@ -1115,13 +1115,46 @@ const Zhan = {
   timerStart(){
     if (this.timerRunning) return;
     this.timerRunning = true;
-    this.timerTickId = setInterval(() => { this.timerElapsed++; this.timerRefresh(); }, 1000);
+    this.timerTickId = setInterval(() => {
+      this.timerElapsed++;
+      // 每满 10 分钟（600s）轻柔提醒一次
+      if (this.timerElapsed > 0 && this.timerElapsed % 600 === 0){
+        this.timerChime();
+        UI.toast('已站 ' + this.timerFmt(this.timerElapsed) + '，歇一歇，调匀呼吸');
+      }
+      this.timerRefresh();
+    }, 1000);
     document.getElementById('zhanTimerStart').disabled = true;
     document.getElementById('zhanTimerStart').classList.remove('go');
     document.getElementById('zhanTimerPause').disabled = false;
     document.getElementById('zhanTimerPause').textContent = '⏸ 暂停';
     document.getElementById('zhanTimerEnd').disabled = false;
     this.timerRefresh();
+  },
+  // 轻柔磬声提醒：五声音阶双音（宫-角），正弦波 + 长衰减，音量压低
+  timerChime(){
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!this._ac) this._ac = new AC();
+      const ctx = this._ac;
+      if (ctx.state === 'suspended') ctx.resume();
+      const t0 = ctx.currentTime;
+      // 宫(523.25=C5) → 角(659.25=E5)，相隔 0.45s，像远处磬声
+      [[523.25, 0], [659.25, 0.45]].forEach(([freq, dt]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const start = t0 + dt;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.10, start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 1.4);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 1.5);
+      });
+    } catch(e){ /* 音频不可用时静默降级 */ }
   },
   timerPause(){
     if (!this.timerRunning) return;
