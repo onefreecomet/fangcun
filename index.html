@@ -792,6 +792,25 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
       </div>
 
       <div class="card">
+        <h2>云同步</h2>
+        <p class="hint" style="margin-top:0;margin-bottom:12px">
+          把备份推到你的 GitHub 私有仓库，换设备/清缓存后一键拉回。<br>
+          <b>数据仍不进第三方服务器，只存在你自己的仓库里；密码本内容同步时也会上仓库，仓库务必保持私有。</b>
+        </p>
+        <div class="row">
+          <input type="password" id="syncToken" placeholder="GitHub Token（需 repo 权限）" autocomplete="off" onblur="Sync.saveTokenInput()">
+        </div>
+        <p class="hint" style="margin-top:6px;margin-bottom:10px">
+          获取：GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token，勾选 <b>repo</b> 权限后复制粘贴到这里。
+        </p>
+        <div class="row" style="gap:8px">
+          <button class="btn" onclick="Sync.push()">↑ 推送到 GitHub</button>
+          <button class="btn ghost" onclick="Sync.pull()">↓ 从 GitHub 拉取</button>
+        </div>
+        <p class="hint" id="syncInfo"></p>
+      </div>
+
+      <div class="card">
         <h2>危险操作</h2>
         <button class="btn danger" onclick="Store.wipe()">清空所有数据</button>
         <p class="hint">清空前请确认已经导出过备份，这个操作无法撤销。</p>
@@ -800,7 +819,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
       <div class="card">
         <p class="hint" style="margin:0;text-align:center">
           方寸<br>
-          <span style="opacity:.6">v1.5</span>
+          <span style="opacity:.6">v1.5.1</span>
         </p>
       </div>
     </section>
@@ -872,6 +891,7 @@ const Store = (() => {
     // 敏感数据：单独命名空间，导出时排除
     getSecret(key){ return driver.get(SEC + key); },
     setSecret(key, val){ return driver.set(SEC + key, val); },
+    removeSecret(key){ driver.remove(SEC + key); },
 
     exportAll(){
       const data = {};
@@ -924,6 +944,90 @@ const Store = (() => {
     }
   };
 })();
+
+/* ==== 云同步：推/拉到 GitHub 私有仓库 backup/ 目录（浏览器直连，需 repo token） ==== */
+const Sync = {
+  REPO: 'onefreecomet/fangcun',
+  PATH: 'backup/fangcun-data.json',
+  token(){ return Store.getSecret('sync_token') || ''; },
+  setToken(t){ t.trim() ? Store.setSecret('sync_token', t.trim()) : Store.removeSecret('sync_token'); },
+  // 输入框失焦：星号=没动过忽略；空=清除；否则保存新 token
+  saveTokenInput(){
+    const el = document.getElementById('syncToken');
+    if (!el) return;
+    const v = el.value.trim();
+    if (v && v !== '••••••••') this.setToken(v);
+    if (!v) this.setToken('');
+  },
+  refreshInfo(msg){
+    const el = document.getElementById('syncInfo');
+    if (!el) return;
+    const last = Store.get('_lastSync');
+    el.textContent = (msg ? msg + ' · ' : '') + (last ? '上次同步 ' + new Date(last).toLocaleString() : '还没同步过');
+  },
+  saveLast(){ Store.set('_lastSync', Date.now()); },
+
+  async push(){
+    const token = this.token();
+    if (!token){ UI.toast('先填 GitHub Token'); return; }
+    const body = JSON.stringify(Store.exportAll(), null, 2);
+    UI.toast('正在推送…');
+    try {
+      // 先查文件是否存在（拿 sha，PUT 需要它做更新）
+      let sha = null;
+      try {
+        const r = await fetch('https://api.github.com/repos/' + this.REPO + '/contents/' + this.PATH, {
+          headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github+json' }
+        });
+        if (r.ok){ const j = await r.json(); sha = j.sha; }
+      } catch(e){}
+      const res = await fetch('https://api.github.com/repos/' + this.REPO + '/contents/' + this.PATH, {
+        method: 'PUT',
+        headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: '方寸同步 ' + Util.today(), content: btoa(unescape(encodeURIComponent(body))), sha: sha || undefined })
+      });
+      if (!res.ok){
+        const j = await res.json().catch(() => ({}));
+        UI.toast('推送失败：' + (j.message || res.status));
+        return;
+      }
+      this.saveLast();
+      this.refreshInfo('已推送到 GitHub');
+      UI.toast('已推送到 GitHub');
+    } catch(e){
+      UI.toast('推送失败：' + (e.message || '网络错误'));
+    }
+  },
+
+  async pull(){
+    const token = this.token();
+    if (!token){ UI.toast('先填 GitHub Token'); return; }
+    UI.toast('正在拉取…');
+    try {
+      const r = await fetch('https://api.github.com/repos/' + this.REPO + '/contents/' + this.PATH, {
+        headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github+json' }
+      });
+      if (!r.ok){
+        const j = await r.json().catch(() => ({}));
+        UI.toast('拉取失败：' + (j.message || r.status));
+        return;
+      }
+      const j = await r.json();
+      const text = decodeURIComponent(escape(atob(j.content)));
+      const parsed = JSON.parse(text);
+      if (!parsed.data) throw new Error('格式不对');
+      UI.confirm('用云端数据覆盖当前所有数据？确定后立即生效。', () => {
+        const NS = 'bysdash:';
+        Object.entries(parsed.data).forEach(([k,v]) => localStorage.setItem(NS + k, JSON.stringify(v)));
+        this.saveLast();
+        UI.toast('已从 GitHub 拉取，正在重新加载');
+        setTimeout(() => location.reload(), 900);
+      }, '覆盖恢复');
+    } catch(e){
+      UI.toast('拉取失败：' + (e.message || '解析错误'));
+    }
+  }
+};
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -1082,6 +1186,9 @@ const Settings = {
     if (bb && typeof Alpha !== 'undefined') bb.value = Store.get('alpha_base_bing', 0) || '';
     const bh = document.getElementById('alphaBaseHan');
     if (bh && typeof Alpha !== 'undefined') bh.value = Store.get('alpha_base_han', 0) || '';
+    // 云同步：回填 token（星号掩盖）+ 显示上次同步
+    const st = document.getElementById('syncToken');
+    if (st && typeof Sync !== 'undefined'){ st.value = Sync.token() ? '••••••••' : ''; Sync.refreshInfo(); }
   },
 
   refreshBackupInfo(){
