@@ -277,6 +277,21 @@ body.night .gz-big{text-shadow:0 1px 0 rgba(0,0,0,.3)}
   100%{opacity:1;transform:translateY(0)}
 }
 .num-pop{animation:numPop .35s ease-out}
+/* ==== 站桩计时器：时辰感（朱砂主数字 + 发丝线框） ==== */
+.timer{
+  border:1px dashed var(--hair);border-radius:var(--radius-sm);
+  padding:12px 12px 10px;text-align:center;margin-top:2px;
+  background:var(--hair-soft);
+}
+.timer-display{
+  font-family:var(--font-kai);
+  font-size:34px;font-weight:700;color:var(--accent);letter-spacing:3px;line-height:1.2;
+  font-variant-numeric:tabular-nums;
+}
+.timer-status{font-size:11px;color:var(--text-dim);margin-top:2px;letter-spacing:1px}
+.timer .mini-btn{min-width:64px}
+.timer .mini-btn:disabled{opacity:.4;cursor:not-allowed}
+.timer .mini-btn.go{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* 干支卡角落印章图腾 */
 .gz-seal{
   position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:6px;
@@ -464,7 +479,17 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
         <h2>今日打卡</h2>
         <div class="zhan-day" id="zhanDayNum" style="font-size:30px;font-weight:700;color:var(--accent);letter-spacing:2px">—</div>
         <div class="hint" style="margin-top:2px;margin-bottom:12px" id="zhanStreak"></div>
-        <div class="row">
+        <!-- 站桩计时器 -->
+        <div class="timer" id="zhanTimer">
+          <div class="timer-display" id="zhanTimerDisp">00:00</div>
+          <div class="timer-status" id="zhanTimerStatus">未开始</div>
+          <div class="row" style="justify-content:center;gap:10px;margin-top:8px">
+            <button class="mini-btn" id="zhanTimerStart" onclick="Zhan.timerStart()">▶ 开始</button>
+            <button class="mini-btn" id="zhanTimerPause" onclick="Zhan.timerPause()" disabled>⏸ 暂停</button>
+            <button class="mini-btn" id="zhanTimerEnd" onclick="Zhan.timerEnd()" disabled>⏹ 结束</button>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
           <input type="number" id="zhanMin" placeholder="时长（分钟）" min="1" max="600">
         </div>
         <div class="row" style="margin-top:8px">
@@ -1072,6 +1097,59 @@ const Settings = {
 /* ==== 功能：站桩 START ==== */
 const Zhan = {
   // 数据：zhan:YYYY-MM-DD = {min, feel, ts}
+  // 计时器状态：elapsed=已累计秒，running=是否走动，tickId=setInterval id
+  timerElapsed: 0,
+  timerRunning: false,
+  timerTickId: null,
+
+  timerFmt(sec){
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  },
+  timerRefresh(){
+    const disp = document.getElementById('zhanTimerDisp');
+    const st = document.getElementById('zhanTimerStatus');
+    if (disp) disp.textContent = this.timerFmt(this.timerElapsed);
+    if (st) st.textContent = this.timerRunning ? '站桩中…' : (this.timerElapsed > 0 ? '已暂停 · ' + this.timerFmt(this.timerElapsed) : '未开始');
+  },
+  timerStart(){
+    if (this.timerRunning) return;
+    this.timerRunning = true;
+    this.timerTickId = setInterval(() => { this.timerElapsed++; this.timerRefresh(); }, 1000);
+    document.getElementById('zhanTimerStart').disabled = true;
+    document.getElementById('zhanTimerStart').classList.remove('go');
+    document.getElementById('zhanTimerPause').disabled = false;
+    document.getElementById('zhanTimerPause').textContent = '⏸ 暂停';
+    document.getElementById('zhanTimerEnd').disabled = false;
+    this.timerRefresh();
+  },
+  timerPause(){
+    if (!this.timerRunning) return;
+    this.timerRunning = false;
+    clearInterval(this.timerTickId);
+    document.getElementById('zhanTimerStart').disabled = false;
+    document.getElementById('zhanTimerStart').classList.add('go');
+    document.getElementById('zhanTimerPause').textContent = '⏸ 已暂停';
+    this.timerRefresh();
+  },
+  timerEnd(){
+    clearInterval(this.timerTickId);
+    this.timerRunning = false;
+    const totalSec = this.timerElapsed;
+    // 结束：按分钟填入时长框（不足 30 秒按 1 分钟，其余四舍五入）
+    const mins = totalSec < 30 ? 1 : Math.round(totalSec / 60);
+    const minEl = document.getElementById('zhanMin');
+    if (minEl) minEl.value = mins;
+    UI.toast('站了 ' + this.timerFmt(totalSec) + '，已填 ' + mins + ' 分钟');
+    // 复位计时器
+    this.timerElapsed = 0;
+    document.getElementById('zhanTimerStart').disabled = false;
+    document.getElementById('zhanTimerStart').classList.add('go');
+    document.getElementById('zhanTimerPause').disabled = true;
+    document.getElementById('zhanTimerPause').textContent = '⏸ 暂停';
+    document.getElementById('zhanTimerEnd').disabled = true;
+    this.timerRefresh();
+  },
   dates(){
     return Store.list('zhan:').map(k => k.slice(5)).sort();
   },
