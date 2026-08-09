@@ -386,10 +386,10 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
 .seg button.on{background:var(--accent);color:#fff}
 
 /* ==== 常用网址 ==== */
-.link-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.link-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0}
 .link-card{
   background:var(--hair-soft);border-radius:12px;padding:14px 10px;text-align:center;
-  text-decoration:none;color:var(--text);display:block;
+  text-decoration:none;color:var(--text);display:block;min-width:0;overflow:hidden;
 }
 .link-card:active{opacity:.7}
 .link-card .l-ico{font-size:24px;line-height:1}
@@ -819,7 +819,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
       <div class="card">
         <p class="hint" style="margin:0;text-align:center">
           方寸<br>
-          <span style="opacity:.6">v1.5.1</span>
+          <span style="opacity:.6">v1.5.2</span>
         </p>
       </div>
     </section>
