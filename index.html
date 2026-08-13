@@ -128,6 +128,43 @@ body.night .nav button.on{background:linear-gradient(90deg, rgba(200,85,61,.2), 
 }
 body.night .theme-btn{background:rgba(255,255,255,.06)}
 
+/* ════════ 响应式：平板横屏/桌面（三档） ════════ */
+/* ≥700px：侧栏展开成图标配文字 */
+@media (min-width:700px){
+  .side{width:200px;padding-left:14px;padding-right:14px}
+  .brand{text-align:left;padding:0 10px;margin-bottom:20px}
+  .brand .name{font-size:14px;margin-top:6px;word-break:normal;letter-spacing:2px}
+  .nav{gap:3px}
+  .nav button{
+    display:flex;align-items:center;gap:12px;text-align:left;
+    padding:11px 14px;font-size:15px;
+  }
+  .nav button .ico{display:inline;font-size:20px;margin:0;width:26px;text-align:center}
+  .nav button .ico svg{width:22px;height:22px;margin:0}
+  .nav button.on::before{left:-14px}
+  .theme-btn{padding:12px 14px;font-size:18px;text-align:left}
+  .main{padding:30px 34px 44px}
+}
+/* ≥1100px：卡片双列；标题/副标题/分段控件/提示条占满整行 */
+@media (min-width:1100px){
+  .side{width:230px}
+  .main{padding:38px 46px 56px}
+  .page.on{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;align-content:start;
+  }
+  .page.on > .page-title,
+  .page.on > .page-sub,
+  .page.on > .seg,
+  .page.on > .banner,
+  .page.on > .card.wide{grid-column:1 / -1}
+  .page.on > .card{height:fit-content}
+}
+/* ≥1700px：超宽屏限宽居中，一行超过 40 汉字难读 */
+@media (min-width:1700px){
+  .main > .page.on{max-width:1400px;margin:0 auto}
+}
+
 /* ==== 内容区 ==== */
 .main{
   flex:1;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -441,7 +478,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
       <div class="page-title">方寸</div>
       <div class="page-sub slogan" id="homeDateSub">一切福田，不离方寸</div>
 
-      <div class="card">
+      <div class="card wide">
         <h2>今日干支</h2>
         <div class="gz-seal" aria-hidden="true">方</div>
         <div class="gz-wrap">
@@ -463,7 +500,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
         <div id="quoteManage" style="margin-top:6px"></div>
       </div>
 
-      <div class="card">
+      <div class="card wide">
         <h2>今日一览</h2>
         <div class="stat-grid" id="homeStats"></div>
       </div>
@@ -475,7 +512,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
       <div class="page-title">站桩</div>
       <div class="page-sub" id="zhanSub"></div>
 
-      <div class="card">
+      <div class="card wide">
         <h2>今日打卡</h2>
         <div class="zhan-day" id="zhanDayNum" style="font-size:30px;font-weight:700;color:var(--accent);letter-spacing:2px">—</div>
         <div class="hint" style="margin-top:2px;margin-bottom:12px" id="zhanStreak"></div>
@@ -516,7 +553,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
         <button data-a="han" onclick="Alpha.switch('han')">🌸 涵涵</button>
       </div>
 
-      <div class="card">
+      <div class="card wide">
         <h2>记一笔提交</h2>
         <div class="row">
           <select id="alphaRegion">
@@ -676,7 +713,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
       <div class="page-title">农历 · 八字</div>
       <div class="page-sub" id="lunarTodaySub"></div>
 
-      <div class="card">
+      <div class="card wide">
         <h2>今日干支</h2>
         <div class="gz-big" id="lunarGzDay">—</div>
         <div class="gz-sub" id="lunarGzSub">—</div>
@@ -776,7 +813,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
         </div>
       </div>
 
-      <div class="card">
+      <div class="card wide">
         <h2>数据备份</h2>
         <p class="hint" style="margin-top:0;margin-bottom:12px">
           你的所有数据都存在这台手机的浏览器里，不在任何服务器上。<br>
@@ -791,7 +828,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
         <p class="hint" id="backupInfo"></p>
       </div>
 
-      <div class="card">
+      <div class="card wide">
         <h2>云同步</h2>
         <p class="hint" style="margin-top:0;margin-bottom:12px">
           把备份推到你的 GitHub 私有仓库，换设备/清缓存后一键拉回。<br>
@@ -819,7 +856,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
       <div class="card">
         <p class="hint" style="margin:0;text-align:center">
           方寸<br>
-          <span style="opacity:.6">v1.5.2</span>
+          <span style="opacity:.6">v1.6</span>
         </p>
       </div>
     </section>
@@ -883,6 +920,57 @@ const Store = (() => {
         .filter(k => k.startsWith(NS + prefix))
         .map(k => k.slice(NS.length));
     },
+
+    /* ── v1.6.0 数据层增强（对齐上游 skill v1.2.0） ── */
+
+    /** 数组型数据的条目列表（过滤软删除墓碑），可选排序 */
+    listItems(key, sort){
+      let arr = (this.get(key, []) || []).filter(x => x && !x._d);
+      if (sort === 'asc') arr = arr.slice().reverse();
+      else if (sort) arr = arr.slice().sort(sort);
+      return arr;
+    },
+
+    /** 增或改一条。没有 id 就生成一个；自动打修改时间 */
+    upsert(key, item){
+      const raw = this.get(key, []) || [];
+      const it = Object.assign({}, item);
+      if (!it.id) it.id = Util.uid();
+      it._u = Date.now();
+      delete it._d;
+      const i = raw.findIndex(x => x && x.id === it.id);
+      if (i >= 0) raw[i] = Object.assign({}, raw[i], it); else raw.push(it);
+      this.set(key, raw);
+      return it;
+    },
+
+    /** 软删除：留墓碑，避免同步回滚复活（单设备时等同删除，但结构兼容） */
+    softDelete(key, id){
+      const raw = this.get(key, []) || [];
+      const i = raw.findIndex(x => x && x.id === id);
+      if (i >= 0) raw[i] = { id, _d: 1, _u: Date.now() };
+      else raw.push({ id, _d: 1, _u: Date.now() });
+      this.set(key, raw);
+    },
+
+    /** 计数器：每次事件加一条（同步时不重不丢的基础） */
+    incr(key, n = 1){
+      const raw = this.get(key, []) || [];
+      for (let i = 0; i < n; i++) raw.push({ id: Util.uid(), _u: Date.now() });
+      this.set(key, raw);
+      return this.count(key);
+    },
+    decr(key){
+      const alive = this.listItems(key);
+      if (alive.length) this.softDelete(key, alive[alive.length - 1].id);
+      return this.count(key);
+    },
+    count(key){ return this.listItems(key).length; },
+
+    upsertDaily(key, item){ return this.upsert(key + ':' + Util.today(), item); },
+    incrDaily(key, n = 1){ return this.incr(key + ':' + Util.today(), n); },
+    decrDaily(key){ return this.decr(key + ':' + Util.today()); },
+    countDaily(key){ return this.count(key + ':' + Util.today()); },
 
     // 按天存取：自动带上今天的日期，功能代码不用自己拼 key
     getDaily(key, fallback = null){ return this.get(key + ':' + Util.today(), fallback); },
