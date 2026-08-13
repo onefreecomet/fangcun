@@ -685,6 +685,20 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
     </section>
     <!-- ==== 功能：密码本 END ==== -->
 
+    <!-- ==== 功能：周复盘 START ==== -->
+    <section class="page" id="page-recap">
+      <div class="page-title">这一周</div>
+      <div class="page-sub">周日晚上看一眼，比任何提醒都管用</div>
+      <div class="card wide">
+        <div id="recapBody"></div>
+        <div class="row" style="margin-top:18px">
+          <button class="btn" onclick="Recap.makeCard()">生成图卡</button>
+        </div>
+        <p class="hint">生成一张能存下来的图，想发就发。图上不含你的具体记录内容。</p>
+      </div>
+    </section>
+    <!-- ==== 功能：周复盘 END ==== -->
+
     <!-- ==== 功能：网址 START ==== -->
     <section class="page" id="page-links">
       <div class="page-title">江湖</div>
@@ -856,7 +870,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
       <div class="card">
         <p class="hint" style="margin:0;text-align:center">
           方寸<br>
-          <span style="opacity:.6">v1.6</span>
+          <span style="opacity:.6">v1.6.1</span>
         </p>
       </div>
     </section>
@@ -1128,6 +1142,11 @@ const Util = {
            String(d.getMonth()+1).padStart(2,'0') + '-' +
            String(d.getDate()).padStart(2,'0');
   },
+  todayOf(d){
+    return d.getFullYear() + '-' +
+           String(d.getMonth()+1).padStart(2,'0') + '-' +
+           String(d.getDate()).padStart(2,'0');
+  },
   uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); },
   esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); },
 
@@ -1196,6 +1215,142 @@ const UI = {
    App · 路由与启动
    每加一个功能，在 routes 里加一条，侧边栏自动就有了。
    ═══════════════════════════════════════════════════════════ */
+
+/* ==== 功能：周复盘 START ====
+   周复盘 + 一键图卡：让人愿意分享「我连续记录了 100 天」的成就。
+   数据来自方寸的关键动作（站桩/Alpha），通过 Store.incrDaily('recap_done') 计数。 */
+const Recap = {
+  /** 把本周数据汇总成几个数字 */
+  collect(){
+    const days = [];
+    const today = new Date();
+    const dow = (today.getDay() + 6) % 7;
+    for (let i = 0; i < 7; i++){
+      const d = new Date(today); d.setDate(today.getDate() - dow + i);
+      days.push(Util.todayOf(d));
+    }
+    const done = days.reduce((s, d) => s + Store.count('recap_done:' + d), 0);
+    // 连续天数：取站桩最近一次有记录的日期往前数
+    const streak = this.streak();
+    return { days, done, streak, from: days[0], to: days[6] };
+  },
+  /** 站桩连续天数（沿用 Zhan.streak 思路：今天往前数） */
+  streak(){
+    let n = 0; const d = new Date();
+    while (true){
+      const ds = Util.todayOf(d);
+      if (Store.count('recap_done:' + ds)) { n++; d.setDate(d.getDate() - 1); }
+      else { if (n === 0 && ds === Util.today()) { d.setDate(d.getDate() - 1); continue; } break; }
+      if (n > 3700) break;
+    }
+    return n;
+  },
+
+  render(){
+    const r = this.collect();
+    const el = document.getElementById('recapBody');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="hero num">${r.done}<span class="unit">件事做完了</span></div>
+      <p class="hint">${r.from} 到 ${r.to} · 连续记录 ${r.streak} 天</p>`;
+  },
+
+  /** 画一张 1080×1350 的图卡，取当前主题色 */
+  async makeCard(){
+    const r = this.collect();
+    const cs = getComputedStyle(document.documentElement);
+    const v = n => cs.getPropertyValue(n).trim();
+    const W = 1080, H = 1350, cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d');
+    const font = (sz, w) => `${w || 400} ${sz}px -apple-system,"PingFang SC",system-ui,sans-serif`;
+
+    // 背景（米白/墨色跟主题走）
+    g.fillStyle = v('--bg') || '#fdfdf8'; g.fillRect(0, 0, W, H);
+    // 中段卡片
+    g.fillStyle = v('--card') || '#fff';
+    const pad = 72, cw = W - pad * 2;
+    if (g.roundRect){ g.beginPath(); g.roundRect(pad, 180, cw, 900, 40); g.fill(); }
+    else g.fillRect(pad, 180, cw, 900);
+
+    // 标题
+    g.fillStyle = v('--accent') || '#a63c2e';
+    g.font = font(30, 500);
+    g.fillText('这一周', pad + 56, 300);
+
+    // 大数字
+    g.fillStyle = v('--text') || '#23251d';
+    g.font = font(190, 500);
+    g.fillText(String(r.done), pad + 56, 480);
+    g.font = font(38);
+    g.fillStyle = v('--text-dim') || '#65675e';
+    g.fillText('件事做完了', pad + 56 + g.measureText(String(r.done)).width + 210, 480);
+
+    g.font = font(34);
+    g.fillText(r.from + '  —  ' + r.to, pad + 56, 560);
+
+    // 七日柱状方块
+    const bw = 96, gap = 24, y = 660;
+    const lbls = '一二三四五六日';
+    for (let i = 0; i < 7; i++){
+      const n = Store.count('recap_done:' + r.days[i]);
+      g.fillStyle = n ? (v('--accent') || '#a63c2e') : (v('--line') || '#e5e7e0');
+      g.globalAlpha = n ? Math.min(1, 0.35 + n * 0.18) : 1;
+      const x = pad + 56 + i * (bw + gap);
+      if (g.roundRect){ g.beginPath(); g.roundRect(x, y, bw, bw, 26); g.fill(); }
+      else g.fillRect(x, y, bw, bw);
+      g.globalAlpha = 1;
+      g.fillStyle = v('--text-dim') || '#65675e';
+      g.font = font(28);
+      g.fillText(lbls[i], x + bw / 2 - 14, y + bw + 48);
+    }
+
+    // 连续天数
+    g.fillStyle = v('--text') || '#23251d';
+    g.font = font(46, 500);
+    g.fillText('连续记录 ' + r.streak + ' 天', pad + 56, 900);
+
+    // 轻署名
+    g.fillStyle = v('--text-dim') || '#9ea096';
+    g.font = font(26);
+    g.fillText('方寸工作台', pad + 56, 1010);
+    g.font = font(22);
+    g.fillText('由方寸工作台生成', pad + 56, 1046);
+
+    // 导出
+    cv.toBlob(b => {
+      const url = URL.createObjectURL(b);
+      const a = document.createElement('a');
+      a.href = url; a.download = '这一周-' + r.to + '.png'; a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        UI.toast('图卡已保存');
+      }, 800);
+    }, 'image/png');
+  },
+
+  /** 老用户首次进入时一次性补齐历史计数（按现有数据回填近 60 天） */
+  migrate(){
+    if (Store.get('_recap_migrated')) return;
+    const today = new Date();
+    for (let i = 0; i < 60; i++){
+      const d = new Date(today); d.setDate(today.getDate() - i);
+      const ds = Util.todayOf(d);
+      const key = 'recap_done:' + ds;
+      if (Store.count(key)) continue;
+      // 站桩有记录 = 1 件事
+      let cnt = Store.get('zhan:' + ds) ? 1 : 0;
+      // Alpha 当天有几条 = 几件事
+      cnt += Store.count('alpha:' + ds);
+      if (cnt > 0){
+        for (let j = 0; j < cnt; j++) Store.incr(key);
+      }
+    }
+    Store.set('_recap_migrated', 1);
+  }
+};
+/* ==== 功能：周复盘 END ==== */
+
 const App = {
   routes: [
     { id:'home',     icon:'',  name:'首页',  hidden:true, onShow: () => Home.render() },
@@ -1206,6 +1361,7 @@ const App = {
     { id:'todo', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/><path d="M9 12l2 2 4-4.5"/></svg>', name:'待办',  onShow: () => Todo.render() },
     { id:'pass', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="1.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15.5" r="1.6"/></svg>', name:'密码本', onShow: () => Pass.render() },
     { id:'links', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l5-8 4 5 3-3.5L21 18"/><path d="M4 21h16"/><path d="M5 14.5h.01M9.2 11.5h.01M15.2 12.5h.01"/></svg>', name:'江湖',  onShow: () => Links.render() },
+    { id:'recap', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>', name:'这一周', onShow: () => Recap.render() },
     { id:'settings', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="1.5"/><path d="M12 8.5v7M8.5 12h7"/></svg>', name:'设置',  onShow: () => Settings.render() }
   ],
 
@@ -1240,6 +1396,7 @@ const App = {
     const last = Store.get('_lastPage');
     this.go(this.routes.some(r => r.id === last) ? last : this.routes[0].id);
 
+    if (typeof Recap !== 'undefined') Recap.migrate(); // 周复盘：老用户首次进入回填历史计数
     this.checkBackup();
   },
 
@@ -1482,6 +1639,7 @@ const Zhan = {
     const feel = document.getElementById('zhanFeel').value.trim();
     if (!min && !feel){ UI.toast('写点时长或感受再记'); return; }
     Store.setDaily('zhan', { min: min || null, feel, ts: Date.now() });
+    Store.incrDaily('recap_done'); // 周复盘事件埋点：每天站桩=做完了1件事
     UI.toast('已记下，第 ' + this.dayNumNow() + ' 天');
     this.render();
   },
@@ -1542,6 +1700,7 @@ const Alpha = {
     const all = Store.getDaily('alpha', []);
     all.unshift({ id: Util.uid(), owner: this.acct, region, type, note, ts: Date.now() });
     Store.setDaily('alpha', all);
+    Store.incrDaily('recap_done'); // 周复盘事件埋点：每提交一笔=做完了1件事
     document.getElementById('alphaRegion').value = '';
     document.getElementById('alphaType').value = '';
     document.getElementById('alphaNote').value = '';
