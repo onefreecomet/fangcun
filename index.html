@@ -844,21 +844,36 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
 
       <div class="card wide">
         <h2>云同步</h2>
-        <p class="hint" style="margin-top:0;margin-bottom:12px">
-          把备份推到你的 GitHub 私有仓库，换设备/清缓存后一键拉回。<br>
-          <b>数据仍不进第三方服务器，只存在你自己的仓库里；密码本内容同步时也会上仓库，仓库务必保持私有。</b>
-        </p>
-        <div class="row">
-          <input type="password" id="syncToken" placeholder="GitHub Token（需 repo 权限）" autocomplete="off" onblur="Sync.saveTokenInput()">
+        <div class="seg" style="margin-bottom:12px">
+          <button class="mini-btn" onclick="document.getElementById('ghSyncBlock').style.display='block';document.getElementById('edgeSyncBlock').style.display='none'">GitHub 手动</button>
+          <button class="mini-btn" onclick="document.getElementById('edgeSyncBlock').style.display='block';document.getElementById('ghSyncBlock').style.display='none'">自动同步</button>
         </div>
-        <p class="hint" style="margin-top:6px;margin-bottom:10px">
-          获取：GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token，勾选 <b>repo</b> 权限后复制粘贴到这里。
-        </p>
-        <div class="row" style="gap:8px">
-          <button class="btn" onclick="Sync.push()">↑ 推送到 GitHub</button>
-          <button class="btn ghost" onclick="Sync.pull()">↓ 从 GitHub 拉取</button>
+
+        <div id="ghSyncBlock">
+          <p class="hint" style="margin-top:0;margin-bottom:12px">
+            把备份推到你的 GitHub 私有仓库，换设备/清缓存后一键拉回。<br>
+            <b>数据仍不进第三方服务器，只存在你自己的仓库里；密码本内容同步时也会上仓库，仓库务必保持私有。</b>
+          </p>
+          <div class="row">
+            <input type="password" id="syncToken" placeholder="GitHub Token（需 repo 权限）" autocomplete="off" onblur="Sync.saveTokenInput()">
+          </div>
+          <p class="hint" style="margin-top:6px;margin-bottom:10px">
+            获取：GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token，勾选 <b>repo</b> 权限后复制粘贴到这里。
+          </p>
+          <div class="row" style="gap:8px">
+            <button class="btn" onclick="Sync.push()">↑ 推送到 GitHub</button>
+            <button class="btn ghost" onclick="Sync.pull()">↓ 从 GitHub 拉取</button>
+          </div>
+          <p class="hint" id="syncInfo"></p>
         </div>
-        <p class="hint" id="syncInfo"></p>
+
+        <div id="edgeSyncBlock" style="display:none">
+          <p class="hint" style="margin-top:0;margin-bottom:12px">
+            <b>自动同步</b>：任何设备打开都是最新数据——本地先存、云端自动对齐（打开拉取/改动后 4 秒推送）。<br>
+            需要部署在腾讯云 EdgeOne Pages（同步接口）。<b>云端数据为明文，密码忘了就进不去；开启前建议先导出一份本地备份。</b>
+          </p>
+          <div id="edgeSyncBody"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -870,7 +885,7 @@ body.night .slogan::before,body.night .slogan::after{background:linear-gradient(
       <div class="card">
         <p class="hint" style="margin:0;text-align:center">
           方寸<br>
-          <span style="opacity:.6">v1.6.1</span>
+          <span style="opacity:.6">v1.7</span>
         </p>
       </div>
     </section>
@@ -924,6 +939,7 @@ const Store = (() => {
     set(key, val){
       const ok = driver.set(NS + key, val);
       if (ok) driver.set(NS + '_lastWrite', Date.now());
+      if (ok && typeof AutoSync !== 'undefined') AutoSync.schedule(); // 改动后防抖推送到 EdgeOne
       return ok;
     },
     remove(key){ driver.remove(NS + key); },
@@ -994,6 +1010,46 @@ const Store = (() => {
     getSecret(key){ return driver.get(SEC + key); },
     setSecret(key, val){ return driver.set(SEC + key, val); },
     removeSecret(key){ driver.remove(SEC + key); },
+
+    /* ── v1.7 自动同步：整包导出/按条合并 ── */
+
+    /** 导出给云端或备份用的整包（不含 secret） */
+    dump(){
+      const data = {};
+      driver.keys().filter(k => k.startsWith(NS)).forEach(k => {
+        data[k.slice(NS.length)] = driver.get(k);
+      });
+      return data;
+    },
+
+    /** 按 id 合并两条列表：同 id 取 _u 时间新的；删除留墓碑（_d）不会复活 */
+    mergeList(a, b){
+      const m = new Map();
+      for (const it of [...(a || []), ...(b || [])]) {
+        if (!it || !it.id) continue;
+        const prev = m.get(it.id);
+        if (!prev || (it._u || 0) > (prev._u || 0)) m.set(it.id, it);
+      }
+      return [...m.values()];
+    },
+
+    /** 把远端整包数据合并进本地。数组型逐条合并，单值取时间新的 */
+    mergeRemote(remote){
+      if (!remote || typeof remote !== 'object') return 0;
+      let changed = 0;
+      for (const [key, rv] of Object.entries(remote)) {
+        if (key.startsWith('_')) continue;
+        const lv = this.get(key, null);
+        if (Array.isArray(rv)) {
+          const merged = this.mergeList(Array.isArray(lv) ? lv : [], rv);
+          if (JSON.stringify(merged) !== JSON.stringify(lv)) { driver.set(NS + key, merged); changed++; }
+        } else if (lv === null || lv === undefined) {
+          driver.set(NS + key, rv); changed++;
+        }
+        // 单值且两边都有：保守保留本地，避免远端旧值覆盖刚改的设置
+      }
+      return changed;
+    },
 
     exportAll(){
       const data = {};
@@ -1351,6 +1407,156 @@ const Recap = {
 };
 /* ==== 功能：周复盘 END ==== */
 
+/* ==== 双端自动同步 START（EdgeOne 版，与 GitHub 手动同步并存） ====
+   三条设计红线（破了会烧免费额度或丢数据）：
+   1. 本地优先 —— 写入永远先落 localStorage，界面立刻变，云端异步。
+   2. 绝不轮询 —— 只在「打开时 / 切回前台 / 手动」拉取。
+   3. 推送防抖 —— 改动后等 4 秒再推，连续操作合并成一次请求。
+   部署：必须走 EdgeOne Pages「从 Git 仓库导入」（依赖 @edgeone/pages-blob 需平台构建安装）。 */
+const AutoSync = {
+  DEBOUNCE: 4000,
+  _timer: null,
+  _busy: false,
+
+  cfg(){ return Store.get('_sync', { on:false, user:'' }); },
+  on(){ return !!this.cfg().on; },
+  pass(){ return Store.getSecret('syncPass') || ''; },
+
+  async call(action, extra = {}){
+    const c = this.cfg();
+    const r = await fetch('/api/sync', {
+      method:'POST',
+      headers:{ 'content-type':'application/json' },
+      body: JSON.stringify(Object.assign({ action, user:c.user, pass:this.pass() }, extra))
+    });
+    const j = await r.json().catch(() => ({ error:'返回格式不对' }));
+    if (!r.ok) throw new Error(j.error || ('请求失败 ' + r.status));
+    return j;
+  },
+
+  /** 开启同步：首次会把这个用户名注册下来 */
+  async enable(user, pass){
+    user = (user || '').trim().toLowerCase();
+    if (user.length < 3) return UI.toast('用户名至少 3 个字符');
+    if ((pass || '').length < 8) return UI.toast('密码至少 8 位');
+    Store.set('_sync', { on:true, user });
+    Store.setSecret('syncPass', pass);
+    try {
+      const j = await this.call('push', { data: Store.dump() });   // push 兼注册
+      if (j.data) Store.mergeRemote(j.data);
+      Store.set('_syncAt', Date.now());
+      UI.toast(j.created ? '同步已开启' : '已连上，数据已合并');
+      setTimeout(() => location.reload(), 900);
+    } catch(e){
+      Store.set('_sync', { on:false, user:'' });
+      Store.setSecret('syncPass', '');
+      UI.toast(e.message);
+    }
+  },
+
+  disable(){
+    if (!UI.confirm('关闭同步？本地数据一条不会少，只是不再和云端对齐。', () => {})) return;
+    Store.set('_sync', { on:false, user:'' });
+    Store.setSecret('syncPass', '');
+    UI.toast('已关闭同步');
+    Settings.render();
+  },
+
+  async changePass(np){
+    if ((np || '').length < 8) return UI.toast('新密码至少 8 位');
+    try {
+      await this.call('chpass', { newPass: np });
+      Store.setSecret('syncPass', np);
+      UI.toast('密码已改');
+    } catch(e){ UI.toast(e.message); }
+  },
+
+  /** 拉取并合并。失败一律静默降级——本地数据才是主的 */
+  async pull(loud){
+    if (!this.on() || this._busy) return;
+    this._busy = true;
+    this.status('同步中');
+    try {
+      const j = await this.call('pull');
+      const n = Store.mergeRemote(j.data || {});
+      Store.set('_syncAt', Date.now());
+      this.status('已同步');
+      if (n) { if (loud) UI.toast('拉到 ' + n + ' 处更新'); App.refresh(); }
+      else if (loud) UI.toast('已是最新');
+    } catch(e){
+      this.status('未同步');
+      if (loud) UI.toast(e.message.includes('NO_ACCOUNT') ? '云端还没有数据' : e.message);
+    } finally { this._busy = false; }
+  },
+
+  /** 改动后延迟推送，把连续操作合并成一次 */
+  schedule(){
+    if (!this.on()) return;
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => this.push(), this.DEBOUNCE);
+  },
+
+  async push(){
+    if (!this.on() || this._busy) return;
+    this._busy = true;
+    this.status('同步中');
+    try {
+      const j = await this.call('push', { data: Store.dump() });
+      if (j.data) Store.mergeRemote(j.data);
+      Store.set('_syncAt', Date.now());
+      this.status('已同步');
+    } catch(e){
+      this.status('未同步');
+      console.warn('同步失败，本地数据不受影响：', e.message);
+    } finally { this._busy = false; }
+  },
+
+  status(t){
+    const el = document.getElementById('syncState');
+    if (el) el.textContent = t;
+  },
+
+  /** 设置页渲染：未开启=表单，已开启=状态+改密+关闭 */
+  renderSettings(){
+    const el = document.getElementById('edgeSyncBody');
+    if (!el) return;
+    const c = this.cfg();
+    if (!c.on){
+      el.innerHTML =
+        '<div class="row">' +
+          '<input type="text" id="esUser" placeholder="用户名（≥3 字符，决定数据存哪）" autocomplete="off">' +
+        '</div>' +
+        '<div class="row" style="margin-top:8px">' +
+          '<input type="password" id="esPass" placeholder="密码（≥8 位，改了只换锁不搬家）" autocomplete="new-password">' +
+        '</div>' +
+        '<div class="row" style="margin-top:10px">' +
+          '<button class="btn" onclick="AutoSync.enable(document.getElementById(\'esUser\').value, document.getElementById(\'esPass\').value)">开启自动同步</button>' +
+        '</div>' +
+        '<p class="hint" style="margin-top:8px">开启前请先到「数据备份」导出本地备份。开启后首次会把现有数据推上去。</p>';
+      return;
+    }
+    const at = Store.get('_syncAt');
+    el.innerHTML =
+      '<p class="hint" style="margin-top:0">已开启 · 用户名 <b>' + Util.esc(c.user) + '</b>' +
+        (at ? ' · 上次同步 ' + new Date(at).toLocaleString() : '') + '</p>' +
+      '<div class="row">' +
+        '<button class="btn ghost" onclick="AutoSync.pull(true)">立即同步</button>' +
+        '<button class="btn ghost" onclick="var np=prompt(\'新密码（≥8 位）\');if(np)AutoSync.changePass(np)">改密码</button>' +
+        '<button class="btn danger" onclick="AutoSync.disable()">关闭同步</button>' +
+      '</div>';
+  },
+
+  init(){
+    if (!this.on()) return;
+    this.pull();                                   // 打开时拉一次
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) this.pull();           // 切回前台再拉一次。不轮询
+    });
+    window.addEventListener('online', () => this.push());
+  }
+};
+/* ==== 双端自动同步 END ==== */
+
 const App = {
   routes: [
     { id:'home',     icon:'',  name:'首页',  hidden:true, onShow: () => Home.render() },
@@ -1397,6 +1603,7 @@ const App = {
     this.go(this.routes.some(r => r.id === last) ? last : this.routes[0].id);
 
     if (typeof Recap !== 'undefined') Recap.migrate(); // 周复盘：老用户首次进入回填历史计数
+    if (typeof AutoSync !== 'undefined') AutoSync.init(); // 自动同步：打开时拉取（开启时）
     this.checkBackup();
   },
 
@@ -1434,6 +1641,8 @@ const Settings = {
     // 云同步：回填 token（星号掩盖）+ 显示上次同步
     const st = document.getElementById('syncToken');
     if (st && typeof Sync !== 'undefined'){ st.value = Sync.token() ? '••••••••' : ''; Sync.refreshInfo(); }
+    // EdgeOne 自动同步设置页渲染
+    if (typeof AutoSync !== 'undefined') AutoSync.renderSettings();
   },
 
   refreshBackupInfo(){
